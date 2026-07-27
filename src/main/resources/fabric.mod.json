@@ -1,0 +1,42 @@
+{
+	"schemaVersion": 1,
+	"id": "peterwolfs_planes",
+	"version": "${version}",
+	"name": "Peter Wolf's Planes",
+	"description": "Adds steerable biplanes with custom flight physics and key-controlled engine and roll.",
+	"authors": [
+		"Piotrek"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/"
+	},
+	"license": "CC0-1.0",
+	"environment": "*",
+	"icon": "assets/peterwolfs_planes/icon.png",
+	"custom": {
+		"modmenu": {
+			"banner": "assets/peterwolfs_planes/banner.png"
+		}
+	},
+	"entrypoints": {
+		"main": [
+			"com.piotrek.peterwolfsplanes.PeterwolfsPlanesMod"
+		],
+		"client": [
+			"com.piotrek.peterwolfsplanes.client.PeterwolfsPlanesClient"
+		]
+	},
+	"mixins": [
+		"peterwolfs_planes.mixins.json",
+		{
+			"config": "peterwolfs_planes.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

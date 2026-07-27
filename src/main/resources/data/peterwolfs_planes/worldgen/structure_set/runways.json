@@ -1,0 +1,16 @@
+{
+  "structures": [
+    {
+      "structure": "peterwolfs_planes:runway",
+      "weight": 1
+    }
+  ],
+  "placement": {
+    "type": "minecraft:random_spread",
+    "spacing": 20,
+    "separation": 6,
+    "salt": 948210348,
+    "frequency_reduction_method": "default",
+    "frequency": 1
+  }
+}

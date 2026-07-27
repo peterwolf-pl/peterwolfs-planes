@@ -1,0 +1,61 @@
+{
+  "type": "minecraft:chest",
+  "pools": [
+    {
+      "rolls": {
+        "min": 2,
+        "max": 4
+      },
+      "entries": [
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:plane",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:water_plane",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:squadron_horn",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:villager_pilot_spawn_egg",
+          "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:coal",
+          "weight": 5,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 4,
+                "max": 16
+              }
+            }
+          ]
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:iron_ingot",
+          "weight": 4,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 1,
+                "max": 6
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

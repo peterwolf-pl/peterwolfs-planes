@@ -1,0 +1,16 @@
+{
+  "item.peterwolfs_planes.plane": "Samolot Petera Wolfa",
+  "entity.peterwolfs_planes.plane": "Samolot Petera Wolfa",
+  "item.peterwolfs_planes.large_plane": "Duży Dwupłatowiec",
+  "entity.peterwolfs_planes.large_plane": "Duży Dwupłatowiec",
+  "item.peterwolfs_planes.large_twin_engine_plane": "Duży Dwusilnikowy Dwupłatowiec",
+  "entity.peterwolfs_planes.large_twin_engine_plane": "Duży Dwusilnikowy Dwupłatowiec",
+  "item.peterwolfs_planes.triplane": "Trójpłatowiec Czerwonego Barona",
+  "entity.peterwolfs_planes.triplane": "Trójpłatowiec Czerwonego Barona",
+  "item.peterwolfs_planes.water_plane": "Hydroplan",
+  "entity.peterwolfs_planes.water_plane": "Hydroplan",
+  "item.peterwolfs_planes.villager_pilot_spawn_egg": "Jajo przyzywające pilota-wieśniaka",
+  "item.peterwolfs_planes.squadron_horn": "Róg eskadry",
+  "entity.peterwolfs_planes.villager_pilot": "Pilot-wieśniak",
+  "itemGroup.peterwolfs_planes.group": "Samoloty Petera Wolfa"
+}

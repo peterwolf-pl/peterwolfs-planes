@@ -1,0 +1,19 @@
+{
+  "item.peterwolfs_planes.plane": "Peter Wolf's Plane",
+  "entity.peterwolfs_planes.plane": "Peter Wolf's Plane",
+  "item.peterwolfs_planes.large_plane": "Large Biplane",
+  "entity.peterwolfs_planes.large_plane": "Large Biplane",
+  "item.peterwolfs_planes.large_twin_engine_plane": "Large Twin-Engine Biplane",
+  "entity.peterwolfs_planes.large_twin_engine_plane": "Large Twin-Engine Biplane",
+  "item.peterwolfs_planes.triplane": "Red Baron's Triplane",
+  "entity.peterwolfs_planes.triplane": "Red Baron's Triplane",
+  "item.peterwolfs_planes.water_plane": "Water Plane",
+  "entity.peterwolfs_planes.water_plane": "Water Plane",
+  "item.peterwolfs_planes.villager_pilot_spawn_egg": "Villager Pilot Spawn Egg",
+  "item.peterwolfs_planes.squadron_horn": "Squadron Horn",
+  "entity.peterwolfs_planes.villager_pilot": "Villager Pilot",
+  "item.peterwolfs_planes.paraglider_backpack": "Paraglider Backpack",
+  "item.peterwolfs_planes.monoplane": "Monoplane",
+  "entity.peterwolfs_planes.monoplane": "Monoplane",
+  "itemGroup.peterwolfs_planes.group": "Peter Wolf's Planes"
+}
