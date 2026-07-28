@@ -10,3 +10,7 @@ logs/
 .DS_Store
 *.zip
 previous-releases/
+
+# Resource pack build outputs (rebuild with ./scripts/build-resourcepack.sh)
+server-resource-pack/
+dist/
