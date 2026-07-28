@@ -3,7 +3,7 @@
 	"id": "peterwolfs_planes",
 	"version": "${version}",
 	"name": "Peter Wolf's Planes",
-	"description": "Adds steerable biplanes with custom flight physics and key-controlled engine and roll.",
+	"description": "Steerable biplanes with custom flight physics, plus dogfight combat mode with twin machine guns and TNT bombardment.",
 	"authors": [
 		"Piotrek"
 	],

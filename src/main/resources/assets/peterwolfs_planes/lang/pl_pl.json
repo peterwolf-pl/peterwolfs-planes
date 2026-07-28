@@ -12,5 +12,14 @@
   "item.peterwolfs_planes.villager_pilot_spawn_egg": "Jajo przyzywające pilota-wieśniaka",
   "item.peterwolfs_planes.squadron_horn": "Róg eskadry",
   "entity.peterwolfs_planes.villager_pilot": "Pilot-wieśniak",
-  "itemGroup.peterwolfs_planes.group": "Samoloty Petera Wolfa"
+  "item.peterwolfs_planes.paraglider_backpack": "Plecak z paralotnią",
+  "item.peterwolfs_planes.monoplane": "Jednopłatowiec",
+  "entity.peterwolfs_planes.monoplane": "Jednopłatowiec",
+  "itemGroup.peterwolfs_planes.group": "Samoloty Petera Wolfa",
+  "key.category.peterwolfs_planes.main": "Samoloty Petera Wolfa",
+  "key.peterwolfs_planes.toggle_combat": "Przełącz tryb walki powietrznej",
+  "key.peterwolfs_planes.drop_bomb": "Zrzuć bombę TNT",
+  "message.peterwolfs_planes.combat_armed": "Tryb walki UZBROJONY — LPM karabiny, B bomba",
+  "message.peterwolfs_planes.combat_safe": "Tryb walki BEZPIECZNY",
+  "message.peterwolfs_planes.need_tnt": "Potrzebujesz TNT w ekwipunku, by bombardować"
 }

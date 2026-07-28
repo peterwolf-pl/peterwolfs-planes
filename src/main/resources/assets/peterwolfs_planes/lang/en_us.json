@@ -15,5 +15,11 @@
   "item.peterwolfs_planes.paraglider_backpack": "Paraglider Backpack",
   "item.peterwolfs_planes.monoplane": "Monoplane",
   "entity.peterwolfs_planes.monoplane": "Monoplane",
-  "itemGroup.peterwolfs_planes.group": "Peter Wolf's Planes"
+  "itemGroup.peterwolfs_planes.group": "Peter Wolf's Planes",
+  "key.category.peterwolfs_planes.main": "Peter Wolf's Planes",
+  "key.peterwolfs_planes.toggle_combat": "Toggle Dogfight Combat Mode",
+  "key.peterwolfs_planes.drop_bomb": "Drop TNT Bomb",
+  "message.peterwolfs_planes.combat_armed": "Combat mode ARMED — LMB guns, B bomb",
+  "message.peterwolfs_planes.combat_safe": "Combat mode SAFE",
+  "message.peterwolfs_planes.need_tnt": "Need TNT in inventory to bomb"
 }

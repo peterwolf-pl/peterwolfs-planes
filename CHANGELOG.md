@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0
+
+- Add **dogfight combat mode** for all aircraft (toggle with **V** while piloting).
+- Twin **machine guns**: hold **Left Mouse Button** while armed to fire rapid dual streams along the plane heading (no ammo cost).
+- **TNT bombardment**: press **B** while armed to drop a lit TNT charge that inherits plane velocity (consumes 1× TNT from inventory; creative is free).
+- Piloted airframes now take projectile and explosion damage (HP bar on the cockpit HUD); destroying the airframe ejects passengers with an explosion effect.
+- Cockpit HUD shows combat state (ARMED/SAFE), airframe integrity, and weapon hints.
+- Configurable keybinds under *Peter Wolf's Planes* in Controls.
+
 ## 1.0.10
 
 - Make paraglider descent ratios exact and server-authoritative: single W loses 3 blocks per 10 horizontal, double W loses 5 per 10, and a double-tap A/D spiral loses 4 per 10.

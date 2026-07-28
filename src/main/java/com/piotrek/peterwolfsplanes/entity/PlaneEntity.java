@@ -1,18 +1,30 @@
 package com.piotrek.peterwolfsplanes.entity;
 
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.DamageTypeTags;
 import net.minecraft.util.Mth;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.item.PrimedTnt;
+import net.minecraft.world.entity.projectile.arrow.AbstractArrow;
+import net.minecraft.world.entity.projectile.arrow.Arrow;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.level.levelgen.Heightmap;
 import com.piotrek.peterwolfsplanes.PeterwolfsPlanesMod;
@@ -25,6 +37,16 @@ public class PlaneEntity extends Entity {
 	private static final EntityDataAccessor<Float> ROLL = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Float> RUDDER = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.FLOAT);
 	private static final EntityDataAccessor<Integer> PUSHER_ID = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.INT);
+	private static final EntityDataAccessor<Boolean> COMBAT_MODE = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.BOOLEAN);
+	private static final EntityDataAccessor<Float> COMBAT_HEALTH = SynchedEntityData.defineId(PlaneEntity.class, EntityDataSerializers.FLOAT);
+
+	private static final float MAX_COMBAT_HEALTH = 40.0F;
+	private static final int GUN_COOLDOWN_TICKS = 2;
+	private static final int BOMB_COOLDOWN_TICKS = 20;
+	private static final int BOMB_FUSE_TICKS = 40;
+	private static final float GUN_MUZZLE_VELOCITY = 4.25F;
+	private static final float GUN_SPREAD = 0.85F;
+	private static final double GUN_BASE_DAMAGE = 3.0D;
 
 	private static final double GRAVITY = 0.04D;
 	private static final double AIRFLOW_FOR_FULL_CONTROL = 0.45D;
@@ -62,6 +84,10 @@ public class PlaneEntity extends Entity {
 	private float enginePower = 0.0F;
 	private int groundContactGraceTicks = 0;
 	private int emptyGroundPoseTicks = 0;
+	private int gunCooldownTicks = 0;
+	private int bombCooldownTicks = 0;
+	private boolean pendingGunFire = false;
+	private boolean pendingBombDrop = false;
 	// Smooth yaw tracking for rendering interpolation (client-side only)
 	private float renderYaw = Float.NaN;
 	private float renderYawO = Float.NaN;
@@ -97,6 +123,8 @@ public class PlaneEntity extends Entity {
 		builder.define(ROLL, 0.0F);
 		builder.define(RUDDER, 0.0F);
 		builder.define(PUSHER_ID, -1);
+		builder.define(COMBAT_MODE, false);
+		builder.define(COMBAT_HEALTH, MAX_COMBAT_HEALTH);
 	}
 
 	@Override
@@ -104,6 +132,8 @@ public class PlaneEntity extends Entity {
 		this.setThrottle(input.getFloatOr("Throttle", 0.0F));
 		this.setRoll(input.getFloatOr("Roll", 0.0F));
 		this.setRudder(input.getFloatOr("Rudder", 0.0F));
+		this.setCombatMode(input.getBooleanOr("CombatMode", false));
+		this.setCombatHealth(input.getFloatOr("CombatHealth", MAX_COMBAT_HEALTH));
 	}
 
 	@Override
@@ -111,6 +141,8 @@ public class PlaneEntity extends Entity {
 		output.putFloat("Throttle", this.getThrottle());
 		output.putFloat("Roll", this.getRoll());
 		output.putFloat("Rudder", this.getRudder());
+		output.putBoolean("CombatMode", this.isCombatMode());
+		output.putFloat("CombatHealth", this.getCombatHealth());
 	}
 
 	public int getPusherId() {
@@ -169,6 +201,197 @@ public class PlaneEntity extends Entity {
 		if (Math.abs(value - this.entityData.get(RUDDER)) > 1.0E-4F) {
 			this.entityData.set(RUDDER, value);
 		}
+	}
+
+	public boolean isCombatMode() {
+		return this.entityData.get(COMBAT_MODE);
+	}
+
+	public void setCombatMode(boolean enabled) {
+		if (this.entityData.get(COMBAT_MODE) != enabled) {
+			this.entityData.set(COMBAT_MODE, enabled);
+		}
+	}
+
+	public float getCombatHealth() {
+		return this.entityData.get(COMBAT_HEALTH);
+	}
+
+	public float getMaxCombatHealth() {
+		return MAX_COMBAT_HEALTH;
+	}
+
+	public void setCombatHealth(float health) {
+		if (!Float.isFinite(health)) {
+			health = MAX_COMBAT_HEALTH;
+		}
+		health = Mth.clamp(health, 0.0F, MAX_COMBAT_HEALTH);
+		if (Math.abs(health - this.entityData.get(COMBAT_HEALTH)) > 1.0E-3F) {
+			this.entityData.set(COMBAT_HEALTH, health);
+		}
+	}
+
+	/**
+	 * Applies pilot combat inputs from the client. Weapon spawning runs server-side.
+	 */
+	public void applyCombatInput(boolean combatMode, boolean fireGuns, boolean dropBomb) {
+		boolean wasCombat = this.isCombatMode();
+		this.setCombatMode(combatMode);
+		if (combatMode != wasCombat && this.getFirstPassenger() instanceof Player pilot) {
+			pilot.sendOverlayMessage(
+				Component.translatable(combatMode
+					? "message.peterwolfs_planes.combat_armed"
+					: "message.peterwolfs_planes.combat_safe")
+			);
+			if (!this.level().isClientSide()) {
+				this.level().playSound(
+					null,
+					this.getX(), this.getY(), this.getZ(),
+					combatMode ? SoundEvents.NOTE_BLOCK_PLING.value() : SoundEvents.NOTE_BLOCK_BASS.value(),
+					SoundSource.PLAYERS,
+					0.7F,
+					combatMode ? 1.4F : 0.7F
+				);
+			}
+		}
+
+		if (!combatMode) {
+			this.pendingGunFire = false;
+			this.pendingBombDrop = false;
+			return;
+		}
+
+		this.pendingGunFire = fireGuns;
+		if (dropBomb) {
+			this.pendingBombDrop = true;
+		}
+	}
+
+	private void tickCombatWeapons() {
+		if (this.gunCooldownTicks > 0) {
+			this.gunCooldownTicks--;
+		}
+		if (this.bombCooldownTicks > 0) {
+			this.bombCooldownTicks--;
+		}
+
+		if (!(this.getFirstPassenger() instanceof Player pilot) || !this.isCombatMode()) {
+			this.pendingGunFire = false;
+			this.pendingBombDrop = false;
+			return;
+		}
+
+		if (this.pendingGunFire && this.gunCooldownTicks <= 0) {
+			this.fireMachineGuns(pilot);
+			this.gunCooldownTicks = GUN_COOLDOWN_TICKS;
+		}
+
+		if (this.pendingBombDrop && this.bombCooldownTicks <= 0) {
+			if (this.dropBomb(pilot)) {
+				this.bombCooldownTicks = BOMB_COOLDOWN_TICKS;
+			}
+			this.pendingBombDrop = false;
+		} else if (this.pendingBombDrop && this.bombCooldownTicks > 0) {
+			this.pendingBombDrop = false;
+		}
+	}
+
+	private void fireMachineGuns(Player pilot) {
+		Level world = this.level();
+		if (world.isClientSide()) {
+			return;
+		}
+
+		Vec3 heading = this.calculateHeading(this.getYRot(), this.getXRot());
+		Vec3 right = this.calculateRightVector(this.getYRot());
+		Vec3 planeVelocity = this.getDeltaMovement();
+		// Twin guns: slightly outboard of the nose / wing root
+		float[] lateralOffsets = this.getGunLateralOffsets();
+
+		for (float lateral : lateralOffsets) {
+			Vec3 muzzle = this.position()
+				.add(heading.scale(1.65D))
+				.add(right.scale(lateral))
+				.add(0.0D, 0.35D, 0.0D);
+
+			Arrow arrow = new Arrow(world, pilot, new ItemStack(Items.ARROW), null);
+			arrow.setPos(muzzle.x, muzzle.y, muzzle.z);
+			arrow.setOwner(pilot);
+			arrow.pickup = AbstractArrow.Pickup.DISALLOWED;
+			arrow.setBaseDamage(GUN_BASE_DAMAGE);
+			arrow.setCritArrow(true);
+			arrow.shoot(heading.x, heading.y, heading.z, GUN_MUZZLE_VELOCITY, GUN_SPREAD);
+			// Carry plane speed so shots land where the pilot is aiming in a dogfight
+			arrow.setDeltaMovement(arrow.getDeltaMovement().add(planeVelocity));
+			world.addFreshEntity(arrow);
+		}
+
+		world.playSound(
+			null,
+			this.getX(), this.getY(), this.getZ(),
+			SoundEvents.FIREWORK_ROCKET_BLAST,
+			SoundSource.PLAYERS,
+			0.55F,
+			1.35F + world.getRandom().nextFloat() * 0.25F
+		);
+	}
+
+	protected float[] getGunLateralOffsets() {
+		return new float[] { -0.55F, 0.55F };
+	}
+
+	private boolean dropBomb(Player pilot) {
+		Level world = this.level();
+		if (world.isClientSide()) {
+			return false;
+		}
+
+		if (!this.consumeTnt(pilot)) {
+			pilot.sendOverlayMessage(Component.translatable("message.peterwolfs_planes.need_tnt"));
+			return false;
+		}
+
+		Vec3 heading = this.calculateHeading(this.getYRot(), this.getXRot());
+		Vec3 dropPos = this.position()
+			.add(heading.scale(-0.35D))
+			.add(0.0D, -0.55D, 0.0D);
+
+		PrimedTnt bomb = new PrimedTnt(world, dropPos.x, dropPos.y, dropPos.z, pilot);
+		bomb.setFuse(BOMB_FUSE_TICKS);
+		// Inherit most of the plane velocity so the charge falls away cleanly
+		Vec3 bombVelocity = this.getDeltaMovement().scale(0.85D).add(0.0D, -0.15D, 0.0D);
+		bomb.setDeltaMovement(bombVelocity);
+		world.addFreshEntity(bomb);
+
+		world.playSound(
+			null,
+			this.getX(), this.getY(), this.getZ(),
+			SoundEvents.TNT_PRIMED,
+			SoundSource.PLAYERS,
+			1.0F,
+			0.9F
+		);
+		return true;
+	}
+
+	private boolean consumeTnt(Player pilot) {
+		if (pilot.hasInfiniteMaterials()) {
+			return true;
+		}
+
+		for (int i = 0; i < pilot.getInventory().getContainerSize(); i++) {
+			ItemStack stack = pilot.getInventory().getItem(i);
+			if (stack.is(Items.TNT)) {
+				stack.shrink(1);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private Vec3 calculateRightVector(float yaw) {
+		float yawRad = (float) Math.toRadians(yaw);
+		return new Vec3(Math.cos(yawRad), 0.0D, Math.sin(yawRad));
 	}
 
 	public float getPropellerAngle() {
@@ -231,6 +454,9 @@ public class PlaneEntity extends Entity {
 		if (!this.isClientAuthoritative()) {
 			this.tickPhysics();
 		}
+
+		// Combat weapons always resolve server-side (entity spawn + inventory).
+		this.tickCombatWeapons();
 	}
 
 	private void tickClientVisuals() {
@@ -821,17 +1047,79 @@ public class PlaneEntity extends Entity {
 	}
 
 	@Override
-	public boolean hurtServer(net.minecraft.server.level.ServerLevel world, net.minecraft.world.damagesource.DamageSource source, float amount) {
-		if (this.isRemoved()) return false;
-		if (this.getFirstPassenger() instanceof Player) return false;
-		if (source.getEntity() instanceof Player player && !player.isSpectator()) {
+	public boolean hurtServer(ServerLevel world, DamageSource source, float amount) {
+		if (this.isRemoved()) {
+			return false;
+		}
+
+		boolean combatDamage = source.is(DamageTypeTags.IS_PROJECTILE) || source.is(DamageTypeTags.IS_EXPLOSION);
+		boolean pilotedByPlayer = this.getFirstPassenger() instanceof Player;
+
+		// Empty planes: player left-click still recovers the item (pickup).
+		if (!pilotedByPlayer && !combatDamage && source.getEntity() instanceof Player player && !player.isSpectator()) {
 			if (!player.getAbilities().instabuild) {
 				this.spawnAtLocation(world, this.getDropItem());
 			}
 			this.discard();
 			return true;
 		}
+
+		// Dogfight damage: arrows, machine-gun fire, and TNT can hit occupied aircraft.
+		if (combatDamage) {
+			// Ignore friendly fire from the pilot's own munitions
+			Entity attacker = source.getEntity();
+			if (attacker != null && attacker.getVehicle() == this) {
+				return false;
+			}
+			if (attacker != null && this.hasPassenger(attacker)) {
+				return false;
+			}
+
+			float newHealth = this.getCombatHealth() - amount;
+			this.setCombatHealth(newHealth);
+			world.playSound(
+				null,
+				this.getX(), this.getY(), this.getZ(),
+				SoundEvents.IRON_GOLEM_HURT,
+				SoundSource.NEUTRAL,
+				0.8F,
+				1.2F
+			);
+
+			if (newHealth <= 0.0F) {
+				this.destroyFromCombat(world);
+			}
+			return true;
+		}
+
+		// Piloted aircraft remain immune to melee / generic non-combat hits.
 		return false;
+	}
+
+	private void destroyFromCombat(ServerLevel world) {
+		for (Entity passenger : List.copyOf(this.getPassengers())) {
+			passenger.stopRiding();
+			passenger.setDeltaMovement(this.getDeltaMovement().add(
+				(this.random.nextDouble() - 0.5D) * 0.4D,
+				0.35D,
+				(this.random.nextDouble() - 0.5D) * 0.4D
+			));
+		}
+
+		world.sendParticles(
+			ParticleTypes.EXPLOSION_EMITTER,
+			this.getX(), this.getY() + 0.5D, this.getZ(),
+			1, 0.0D, 0.0D, 0.0D, 0.0D
+		);
+		world.playSound(
+			null,
+			this.getX(), this.getY(), this.getZ(),
+			SoundEvents.GENERIC_EXPLODE.value(),
+			SoundSource.NEUTRAL,
+			1.5F,
+			0.85F
+		);
+		this.discard();
 	}
 
 	@Override

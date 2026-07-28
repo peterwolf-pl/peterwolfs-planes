@@ -218,13 +218,14 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 		// Initialize Paraglider Server Handler
 		ParagliderHandler.register();
 
-		// Handle C2S Inputs
+		// Handle C2S Inputs (flight + dogfight combat)
 		ServerPlayNetworking.registerGlobalReceiver(PlaneInputPayload.TYPE, (payload, context) -> {
 			context.server().execute(() -> {
 				ServerPlayer player = context.player();
 				if (player.getVehicle() instanceof PlaneEntity plane) {
 					plane.setThrottle(payload.throttle());
 					plane.setRudder(payload.rudder());
+					plane.applyCombatInput(payload.combatMode(), payload.fireGuns(), payload.dropBomb());
 				}
 			});
 		});
