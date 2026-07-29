@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.4
+
+- **Starter kit** for servers: every aircraft + paraglider (+ horn, pilot eggs, TNT).
+  - Command (ops): `/planes kit` / `/planes kit @a` / `/planekit`
+  - Function (built-in): `/function peterwolfs_planes:kit`
+  - Optional datapack (first-join auto-kit): `dist/peterwolfs-planes-starter-datapack.zip` — drop into `world/datapacks/`
+- Runway chest loot can roll all plane types and the paraglider.
+
 ## 1.1.3
 
 - LIFT HUD (**H**): clearly shows **climb / sink / level** with real vertical speed (m/s and b/t), plus ridge updraft strength. Centered bar: green = climb, red = descent.

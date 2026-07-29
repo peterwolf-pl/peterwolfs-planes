@@ -29,5 +29,8 @@
   "key.peterwolfs_planes.toggle_lift_hud": "Przełącz HUD LIFT",
   "command.peterwolfs_planes.players_only": "Tej komendy może użyć tylko gracz",
   "command.peterwolfs_planes.liftparticles_on": "Cząsteczki prądów wznoszących WŁĄCZONE",
-  "command.peterwolfs_planes.liftparticles_off": "Cząsteczki prądów wznoszących WYŁĄCZONE"
+  "command.peterwolfs_planes.liftparticles_off": "Cząsteczki prądów wznoszących WYŁĄCZONE",
+  "command.peterwolfs_planes.kit_given": "Starter kit przekazany: %s",
+  "command.peterwolfs_planes.kit_given_many": "Starter kit przekazany graczom: %s",
+  "command.peterwolfs_planes.kit_received": "Starter kit: wszystkie samoloty + paralotnia"
 }

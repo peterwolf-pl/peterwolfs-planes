@@ -1,0 +1,13 @@
+{
+  "criteria": {
+    "joined": {
+      "trigger": "minecraft:tick"
+    }
+  },
+  "requirements": [
+    ["joined"]
+  ],
+  "rewards": {
+    "function": "peterwolfs_planes_starter:on_join"
+  }
+}

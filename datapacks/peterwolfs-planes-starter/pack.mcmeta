@@ -1,0 +1,7 @@
+{
+  "pack": {
+    "description": "Peter Wolf's Planes – starter kit (all aircraft + paraglider)",
+    "min_format": [107, 1],
+    "max_format": [107, 1]
+  }
+}

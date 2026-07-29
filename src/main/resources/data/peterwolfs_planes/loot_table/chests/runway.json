@@ -14,7 +14,32 @@
         },
         {
           "type": "minecraft:item",
+          "name": "peterwolfs_planes:large_plane",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:large_twin_engine_plane",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:triplane",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
           "name": "peterwolfs_planes:water_plane",
+          "weight": 2
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:monoplane",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
+          "name": "peterwolfs_planes:paraglider_backpack",
           "weight": 2
         },
         {
@@ -26,6 +51,20 @@
           "type": "minecraft:item",
           "name": "peterwolfs_planes:villager_pilot_spawn_egg",
           "weight": 3
+        },
+        {
+          "type": "minecraft:item",
+          "name": "minecraft:tnt",
+          "weight": 2,
+          "functions": [
+            {
+              "function": "minecraft:set_count",
+              "count": {
+                "min": 4,
+                "max": 12
+              }
+            }
+          ]
         },
         {
           "type": "minecraft:item",

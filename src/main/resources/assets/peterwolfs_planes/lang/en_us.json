@@ -29,5 +29,8 @@
   "key.peterwolfs_planes.toggle_lift_hud": "Toggle LIFT HUD",
   "command.peterwolfs_planes.players_only": "This command can only be used by a player",
   "command.peterwolfs_planes.liftparticles_on": "Ridge-lift particles ON — rising clouds mark updrafts",
-  "command.peterwolfs_planes.liftparticles_off": "Ridge-lift particles OFF"
+  "command.peterwolfs_planes.liftparticles_off": "Ridge-lift particles OFF",
+  "command.peterwolfs_planes.kit_given": "Starter kit given to %s",
+  "command.peterwolfs_planes.kit_given_many": "Starter kit given to %s player(s)",
+  "command.peterwolfs_planes.kit_received": "Planes starter kit: all aircraft + paraglider"
 }
