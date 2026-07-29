@@ -1,5 +1,6 @@
 package com.piotrek.peterwolfsplanes.entity;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -70,6 +71,22 @@ public class PlaneEntity extends Entity {
 	private static final double GROUND_IDLE_VERTICAL_SPEED = 0.05D;
 	private static final int GROUND_CONTACT_GRACE_TICKS = 6;
 
+	// NPC / villager pilot flight AI
+	/** Horizontal speed (blocks/tick) required before rotation / liftoff. */
+	private static final double AI_TAKEOFF_SPEED = 0.42D;
+	/** Absolute plane pitch (degrees): negative = nose up / climb. */
+	private static final float AI_CLIMB_PITCH = -24.0F;
+	private static final float AI_STEEP_CLIMB_PITCH = -32.0F;
+	private static final float AI_CRUISE_PITCH = -2.0F;
+	/** Target AGL for solo patrol cruise. */
+	private static final double AI_CRUISE_AGL = 42.0D;
+	/** Minimum clearance above terrain / obstacles. */
+	private static final double AI_MIN_CLEARANCE = 14.0D;
+	private static final double AI_HARD_CLEARANCE = 7.0D;
+	/** Stronger pitch authority for AI than player look-follow. */
+	private static final float AI_PITCH_GAIN = 0.12F;
+	private static final float AI_MAX_PITCH_RATE = 2.4F;
+
 	private float propellerAngle = 0.0F;
 	private float propellerAngleO = 0.0F;
 	private float propellerSpeed = 0.0F;
@@ -103,6 +120,10 @@ public class PlaneEntity extends Entity {
 	// Solo villager pilot patrol (figure-8 after climb)
 	private Vec3 aiPatrolCenter = null;
 	private double aiPatrolPhase = 0.0;
+	/** When true, next tickPilotedPhysics treats NPC as airborne (takeoff rotation). */
+	private boolean aiForceAirborne = false;
+	/** Absolute desired XRot for NPC (negative = climb). Only used when pilot == null. */
+	private float aiDesiredPitch = 0.0F;
 
 	public void setAiLeader(PlaneEntity leader) {
 		this.aiLeader = leader;
@@ -493,37 +514,30 @@ public class PlaneEntity extends Entity {
 	private void tickNPCPilotedPhysics(Mob pilotMob, float currentThrottle) {
 		Level world = this.level();
 		Vec3 pos = this.position();
-
-		// 1. Terrain avoidance and height check
-		int currentX = (int) this.getX();
-		int currentZ = (int) this.getZ();
-		int height = world.getHeight(Heightmap.Types.MOTION_BLOCKING, currentX, currentZ);
-
-		// Project forward 20 blocks in current heading direction
 		Vec3 currentVelocity = this.getDeltaMovement();
-		double vx = currentVelocity.x;
-		double vz = currentVelocity.z;
-		double headingLength = Math.sqrt(vx * vx + vz * vz);
-		int aheadX = currentX;
-		int aheadZ = currentZ;
-		if (headingLength > 0.01D) {
-			aheadX = (int) (this.getX() + (vx / headingLength) * 20.0D);
-			aheadZ = (int) (this.getZ() + (vz / headingLength) * 20.0D);
-		}
-		int heightAhead = world.getHeight(Heightmap.Types.MOTION_BLOCKING, aheadX, aheadZ);
-		int maxGround = Math.max(height, heightAhead);
+		this.aiForceAirborne = false;
 
-		boolean lowAltitude = this.getY() < (double)(maxGround + 15);
+		int currentX = Mth.floor(this.getX());
+		int currentZ = Mth.floor(this.getZ());
+		int groundHere = world.getHeight(Heightmap.Types.MOTION_BLOCKING, currentX, currentZ);
+		double agl = this.getY() - groundHere;
 
-		// 2. Leader & Squadron target lookup
+		// Heading for forward scans (use yaw if nearly stopped)
+		float yawRad = (float) Math.toRadians(this.getYRot());
+		double hx = -Math.sin(yawRad);
+		double hz = Math.cos(yawRad);
+		double speedHoriz = Math.sqrt(currentVelocity.x * currentVelocity.x + currentVelocity.z * currentVelocity.z);
+
+		// Multi-range obstacle / terrain scan ahead + left/right
+		ObstacleScan scan = this.scanObstaclesAhead(world, hx, hz);
+
+		// ── Leader / squadron ──────────────────────────────────────────
 		if (this.aiLeader != null && (!this.aiLeader.isAlive() || this.aiLeader.isRemoved())) {
 			this.aiLeader = null;
 		}
-
-		// If no leader, scan for player plane nearby to follow
 		if (this.aiLeader == null) {
 			if (this.aiSearchCooldown-- <= 0) {
-				this.aiSearchCooldown = 20; // check once per second
+				this.aiSearchCooldown = 20;
 				List<PlaneEntity> nearbyPlanes = world.getEntitiesOfClass(
 					PlaneEntity.class,
 					this.getBoundingBox().inflate(120.0D),
@@ -535,17 +549,17 @@ public class PlaneEntity extends Entity {
 			}
 		}
 
-		Vec3 targetPos = null;
-		float targetThrottle = 0.85F;
+		Vec3 targetPos;
+		float targetThrottle = 0.88F;
+		float desiredPitch = AI_CRUISE_PITCH;
+		float desiredYawRateCmd = 0.0F; // via relative yaw → bank
 
 		if (this.aiLeader != null) {
-			// Find our slot in the squadron to calculate formation offset
 			List<PlaneEntity> followers = world.getEntitiesOfClass(
 				PlaneEntity.class,
 				this.getBoundingBox().inflate(150.0D),
 				plane -> plane != this && plane.isAlive() && plane.getAiLeader() == this.aiLeader
 			);
-			// Sort them by entity ID to make slots deterministic
 			followers.sort((p1, p2) -> Integer.compare(p1.getId(), p2.getId()));
 			int slot = 0;
 			for (int i = 0; i < followers.size(); i++) {
@@ -562,13 +576,11 @@ public class PlaneEntity extends Entity {
 				}
 			}
 
-			// Dynamic V-formation offsets
 			int index = slot;
 			double ox = (index % 2 == 0 ? -8.0D : 8.0D) * (index / 2 + 1);
 			double oy = -2.0D * (index / 2 + 1);
 			double oz = -12.0D * (index / 2 + 1);
 
-			// Rotate offset by leader's rotation
 			float leaderYawRad = (float) Math.toRadians(this.aiLeader.getYRot());
 			Vec3 leaderForward = new Vec3(-Math.sin(leaderYawRad), 0.0D, Math.cos(leaderYawRad));
 			Vec3 leaderRight = new Vec3(Math.cos(leaderYawRad), 0.0D, Math.sin(leaderYawRad));
@@ -578,113 +590,225 @@ public class PlaneEntity extends Entity {
 				.add(0.0D, oy, 0.0D)
 				.add(leaderForward.scale(oz));
 
-			// Match leader speed, but apply proportional correction for distance
+			// Keep formation above terrain
+			int slotGround = world.getHeight(
+				Heightmap.Types.MOTION_BLOCKING,
+				Mth.floor(targetPos.x),
+				Mth.floor(targetPos.z)
+			);
+			if (targetPos.y < slotGround + AI_MIN_CLEARANCE) {
+				targetPos = new Vec3(targetPos.x, slotGround + AI_MIN_CLEARANCE + 4.0D, targetPos.z);
+			}
+
 			double distToTarget = pos.distanceTo(targetPos);
-			targetThrottle = this.aiLeader.getThrottle();
+			targetThrottle = Math.max(0.55F, this.aiLeader.getThrottle());
 			if (distToTarget > 10.0D) {
-				targetThrottle = Math.min(1.0F, targetThrottle + 0.2F);
+				targetThrottle = Math.min(1.0F, targetThrottle + 0.25F);
 			} else if (distToTarget < 3.0D) {
-				targetThrottle = Math.max(0.1F, targetThrottle - 0.2F);
+				targetThrottle = Math.max(0.35F, targetThrottle - 0.15F);
 			}
 		} else {
-			// Solo villager pilot patrol:
-			// 1. Climb (wznosić się) to safe altitude first
-			// 2. Then level flight
-			// 3. Fly figure-8 ("latac po 8") around a patrol center
+			// Solo patrol: climb to cruise AGL, then figure-8
 			if (this.aiPatrolCenter == null) {
-				double cx = this.getX();
-				double cz = this.getZ();
-				int cg = world.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) cx, (int) cz);
-				this.aiPatrolCenter = new Vec3(cx, cg + 42.0D, cz);
+				this.aiPatrolCenter = new Vec3(this.getX(), groundHere + AI_CRUISE_AGL, this.getZ());
 				this.aiPatrolPhase = 0.0;
 				this.aiWaypointTicks = 0;
 			}
 
-			// Periodically wander the patrol center so they don't stay in one spot forever
 			if (++this.aiWaypointTicks > 900) {
 				this.aiWaypointTicks = 0;
 				double cx = this.aiPatrolCenter.x + (this.random.nextDouble() - 0.5D) * 90.0D;
 				double cz = this.aiPatrolCenter.z + (this.random.nextDouble() - 0.5D) * 90.0D;
 				int cg = world.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) cx, (int) cz);
-				this.aiPatrolCenter = new Vec3(cx, cg + 42.0D, cz);
+				this.aiPatrolCenter = new Vec3(cx, cg + AI_CRUISE_AGL, cz);
 				this.aiPatrolPhase = this.random.nextDouble() * 6.2832;
 			}
 
-			this.aiPatrolPhase += 0.026; // traverse speed for nice figure-8 loops
+			// Keep patrol altitude above local high ground
+			int patrolGround = world.getHeight(
+				Heightmap.Types.MOTION_BLOCKING,
+				Mth.floor(this.aiPatrolCenter.x),
+				Mth.floor(this.aiPatrolCenter.z)
+			);
+			double cruiseY = Math.max(this.aiPatrolCenter.y, patrolGround + AI_CRUISE_AGL);
+			this.aiPatrolCenter = new Vec3(this.aiPatrolCenter.x, cruiseY, this.aiPatrolCenter.z);
+
+			this.aiPatrolPhase += 0.026;
 			if (this.aiPatrolPhase > 12.566) {
 				this.aiPatrolPhase -= 12.566;
 			}
 
 			double t = this.aiPatrolPhase;
-			double a = 60.0; // size of the 8
+			double a = 60.0;
 			double s = Math.sin(t);
 			double c = Math.cos(t);
 			double d = 1.0 + s * s;
 			double xOff = a * c / d;
 			double zOff = a * s * c / d;
 
-			double cruiseY = this.aiPatrolCenter.y;
-			boolean needsClimb = this.getY() < (cruiseY - 6.0D);
-			double tgtY = needsClimb ? (cruiseY + 6.0D) : cruiseY;
-
+			boolean needsClimb = agl < AI_CRUISE_AGL - 6.0D || this.getY() < cruiseY - 6.0D;
+			double tgtY = needsClimb ? cruiseY + 8.0D : cruiseY;
 			targetPos = new Vec3(this.aiPatrolCenter.x + xOff, tgtY, this.aiPatrolCenter.z + zOff);
-			targetThrottle = needsClimb ? 0.95F : 0.82F;
+			targetThrottle = needsClimb ? 1.0F : 0.85F;
 		}
 
-		// Adjust target position for terrain avoidance / ensure climb
-		if (lowAltitude || (targetPos != null && this.getY() < maxGround + 18.0D)) {
-			targetPos = new Vec3(targetPos.x, Math.max(targetPos.y, maxGround + 28.0D), targetPos.z);
+		// ── Obstacle avoidance: raise target, climb, and/or turn ────────
+		double safeY = Math.max(targetPos.y, scan.maxTerrainAhead + AI_MIN_CLEARANCE + 6.0D);
+		if (scan.imminentCollision || agl < AI_HARD_CLEARANCE || scan.minClearanceAhead < AI_HARD_CLEARANCE) {
+			safeY = Math.max(safeY, scan.maxTerrainAhead + AI_MIN_CLEARANCE + 16.0D);
+			targetThrottle = 1.0F;
+		}
+		targetPos = new Vec3(targetPos.x, safeY, targetPos.z);
+
+		// Turn toward freer side when blocked ahead
+		if (scan.imminentCollision || scan.minClearanceAhead < AI_MIN_CLEARANCE) {
+			if (scan.leftClearance > scan.rightClearance + 2.0D) {
+				desiredYawRateCmd = -35.0F; // bank left (negative relative yaw → left)
+			} else if (scan.rightClearance > scan.leftClearance + 2.0D) {
+				desiredYawRateCmd = 35.0F;
+			} else {
+				// Both bad — pick random side once per second-ish
+				desiredYawRateCmd = (this.tickCount / 40) % 2 == 0 ? -40.0F : 40.0F;
+			}
 			targetThrottle = 1.0F;
 		}
 
-		// 3. Takeoff logic
-		boolean grounded = this.resolveGroundHandling(this.onGround(), currentThrottle, currentVelocity);
-		if (grounded && this.getY() < (double) (maxGround + 8)) {
-			// Runway takeoff run: full throttle, keep steering straight
-			this.setThrottle(1.0F);
-			this.setRudder(0.0F);
-			double speed = Math.max(0.0D, currentVelocity.length());
-			if (speed < 0.45D) {
-				this.aiTargetRelativeYaw = 0.0F;
-				this.aiTargetRelativePitch = 0.0F;
-			} else {
-				this.aiTargetRelativeYaw = 0.0F;
-				this.aiTargetRelativePitch = -25.0F; // Pitch up
+		// Desired absolute pitch from altitude error + obstacles
+		double altError = targetPos.y - this.getY();
+		if (scan.imminentCollision || scan.minClearanceAhead < AI_HARD_CLEARANCE || agl < AI_HARD_CLEARANCE) {
+			desiredPitch = AI_STEEP_CLIMB_PITCH;
+			targetThrottle = 1.0F;
+		} else if (altError > 8.0D || agl < AI_MIN_CLEARANCE || scan.minClearanceAhead < AI_MIN_CLEARANCE) {
+			// Strong climb with meaningful vertical speed (~0.15–0.25 b/t at cruise speed)
+			desiredPitch = AI_CLIMB_PITCH;
+			targetThrottle = Math.max(targetThrottle, 0.95F);
+		} else if (altError > 2.0D) {
+			desiredPitch = Mth.clamp((float) (-8.0D - altError * 0.8D), AI_STEEP_CLIMB_PITCH, -6.0F);
+			targetThrottle = Math.max(targetThrottle, 0.9F);
+		} else if (altError < -10.0D && agl > AI_CRUISE_AGL) {
+			// Gentle descent only with plenty of clearance
+			desiredPitch = Mth.clamp((float) (4.0D - altError * 0.15D), 2.0F, 12.0F);
+		} else {
+			// Path pitch toward target, but never dive into terrain
+			Vec3 dir = targetPos.subtract(pos);
+			double horizontalDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
+			float pathPitch = horizontalDist > 0.5D
+				? (float) Math.toDegrees(Math.atan2(-dir.y, horizontalDist))
+				: AI_CRUISE_PITCH;
+			// pathPitch uses atan2(-dy,h): positive dy (target above) → negative pitch (nose up). Good.
+			desiredPitch = Mth.clamp(pathPitch, AI_CLIMB_PITCH, 8.0F);
+			if (desiredPitch > 0.0F && (agl < AI_MIN_CLEARANCE + 8.0D || scan.minClearanceAhead < AI_MIN_CLEARANCE + 4.0D)) {
+				desiredPitch = AI_CRUISE_PITCH;
 			}
-			this.tickPilotedPhysics(null, 1.0F, this.aiTargetRelativeYaw, this.aiTargetRelativePitch);
+		}
+
+		// Yaw toward target when not hard-avoiding
+		Vec3 toTarget = targetPos.subtract(pos);
+		double targetYaw = Math.toDegrees(Math.atan2(-toTarget.x, toTarget.z));
+		float yawDiff = Mth.wrapDegrees((float) targetYaw - this.getYRot());
+		if (desiredYawRateCmd == 0.0F) {
+			this.aiTargetRelativeYaw = Mth.clamp(yawDiff, -40.0F, 40.0F);
+		} else {
+			this.aiTargetRelativeYaw = desiredYawRateCmd;
+		}
+
+		this.aiDesiredPitch = desiredPitch;
+		// Keep legacy field for any external readers
+		this.aiTargetRelativePitch = desiredPitch;
+
+		// ── Takeoff: accelerate on ground, then rotate and climb ────────
+		boolean grounded = this.resolveGroundHandling(this.onGround(), currentThrottle, currentVelocity);
+		boolean nearGround = grounded || agl < 2.5D;
+
+		if (nearGround && agl < 8.0D) {
+			this.setThrottle(1.0F);
+			this.setRudder(Mth.clamp(this.aiTargetRelativeYaw / 40.0F, -1.0F, 1.0F));
+
+			if (speedHoriz < AI_TAKEOFF_SPEED && grounded) {
+				// Ground roll — stay level, build speed; allow light steering
+				this.aiDesiredPitch = 0.0F;
+				this.aiForceAirborne = false;
+				this.tickPilotedPhysics(null, 1.0F, this.aiTargetRelativeYaw * 0.35F, 0.0F);
+			} else {
+				// Rotation / initial climb: force airborne physics so pitch is not zeroed
+				this.aiDesiredPitch = AI_STEEP_CLIMB_PITCH;
+				this.aiForceAirborne = true;
+				this.setOnGround(false);
+				this.groundContactGraceTicks = 0;
+				this.tickPilotedPhysics(null, 1.0F, this.aiTargetRelativeYaw * 0.5F, 0.0F);
+			}
 			return;
 		}
 
-		// 4. Cruising Flight AI Target steering
-		Vec3 dir = targetPos.subtract(pos);
-		double targetYaw = Math.toDegrees(Math.atan2(-dir.x, dir.z));
-		double horizontalDist = Math.sqrt(dir.x * dir.x + dir.z * dir.z);
-		double targetPitch = Math.toDegrees(Math.atan2(-dir.y, horizontalDist));
+		this.setThrottle(targetThrottle);
+		this.setRudder(0.0F);
+		this.tickPilotedPhysics(null, targetThrottle, this.aiTargetRelativeYaw, 0.0F);
+	}
 
-		float yawDiff = Mth.wrapDegrees((float) targetYaw - this.getYRot());
-		float pitchDiff = Mth.wrapDegrees((float) targetPitch - this.getXRot());
+	/**
+	 * Forward / side terrain + solid-block scan for NPC pilots.
+	 */
+	private ObstacleScan scanObstaclesAhead(Level world, double hx, double hz) {
+		ObstacleScan scan = new ObstacleScan();
+		double px = this.getX();
+		double py = this.getY();
+		double pz = this.getZ();
+		double rightX = hz;
+		double rightZ = -hx;
 
-		// Clamp steering inputs
-		this.aiTargetRelativeYaw = Mth.clamp(yawDiff, -45.0F, 45.0F);
-		this.aiTargetRelativePitch = Mth.clamp(pitchDiff, -30.0F, 30.0F);
+		double minClear = Double.MAX_VALUE;
+		double maxTerrain = Double.NEGATIVE_INFINITY;
+		boolean imminent = false;
 
-		// For villager pilots without a leader: force proper climb first (nose up),
-		// then once at altitude they will naturally level (pitch ~0) and follow the figure-8 target.
-		if (this.aiLeader == null) {
-			int localGround = world.getHeight(Heightmap.Types.MOTION_BLOCKING, (int) this.getX(), (int) this.getZ());
-			if (this.getY() < localGround + 35.0D) {
-				// Still climbing - command strong nose-up so they actually ascend instead of flying level/straight
-				if (this.getY() < localGround + 18.0D) {
-					this.aiTargetRelativePitch = -16.0F;
-				} else {
-					this.aiTargetRelativePitch = Math.min(this.aiTargetRelativePitch, -10.0F);
-				}
-				targetThrottle = 1.0F;
+		int[] distances = { 6, 12, 18, 24, 32 };
+		for (int dist : distances) {
+			int ax = Mth.floor(px + hx * dist);
+			int az = Mth.floor(pz + hz * dist);
+			int terrain = world.getHeight(Heightmap.Types.MOTION_BLOCKING, ax, az);
+			maxTerrain = Math.max(maxTerrain, terrain);
+			double clear = py - terrain;
+			minClear = Math.min(minClear, clear);
+
+			// Solid blocks at flight altitude (trees, buildings, cliffs)
+			int sampleY = Mth.floor(py);
+			if (world.getBlockState(new BlockPos(ax, sampleY, az)).isSolidRender()
+				|| world.getBlockState(new BlockPos(ax, sampleY + 1, az)).isSolidRender()
+				|| world.getBlockState(new BlockPos(ax, sampleY - 1, az)).isSolidRender()) {
+				imminent = true;
+				minClear = Math.min(minClear, -2.0D);
+			}
+
+			if (dist <= 12 && clear < AI_HARD_CLEARANCE) {
+				imminent = true;
 			}
 		}
 
-		this.setThrottle(targetThrottle);
-		this.tickPilotedPhysics(null, targetThrottle, this.aiTargetRelativeYaw, this.aiTargetRelativePitch);
+		// Side freeness for turn choice
+		double leftClear = 0.0D;
+		double rightClear = 0.0D;
+		for (int dist = 10; dist <= 22; dist += 6) {
+			int lx = Mth.floor(px + hx * dist - rightX * 10.0D);
+			int lz = Mth.floor(pz + hz * dist - rightZ * 10.0D);
+			int rx = Mth.floor(px + hx * dist + rightX * 10.0D);
+			int rz = Mth.floor(pz + hz * dist + rightZ * 10.0D);
+			leftClear += py - world.getHeight(Heightmap.Types.MOTION_BLOCKING, lx, lz);
+			rightClear += py - world.getHeight(Heightmap.Types.MOTION_BLOCKING, rx, rz);
+		}
+
+		scan.minClearanceAhead = minClear == Double.MAX_VALUE ? 99.0D : minClear;
+		scan.maxTerrainAhead = maxTerrain == Double.NEGATIVE_INFINITY ? py - 20.0D : maxTerrain;
+		scan.leftClearance = leftClear;
+		scan.rightClearance = rightClear;
+		scan.imminentCollision = imminent;
+		return scan;
+	}
+
+	private static final class ObstacleScan {
+		double minClearanceAhead = 99.0D;
+		double maxTerrainAhead = 0.0D;
+		double leftClearance = 0.0D;
+		double rightClearance = 0.0D;
+		boolean imminentCollision = false;
 	}
 
 	protected double getThrustForce() { return THRUST_FORCE; }
@@ -748,11 +872,22 @@ public class PlaneEntity extends Entity {
 	private void tickPilotedPhysics(@Nullable Player pilot, float currentThrottle, float aiRelativeYaw, float aiRelativePitch) {
 		Vec3 currentVelocity = this.getDeltaMovement();
 		boolean grounded = this.resolveGroundHandling(this.onGround(), currentThrottle, currentVelocity);
+		// NPC takeoff rotation: leave ground handling so pitch-up is not zeroed
+		if (pilot == null && this.aiForceAirborne) {
+			grounded = false;
+			this.groundContactGraceTicks = 0;
+		}
+
+		boolean npc = pilot == null;
 		Vec3 heading = grounded ? this.calculateGroundHeading(this.getYRot()) : this.calculateHeading(this.getYRot(), this.getXRot());
 		double speed = Math.max(0.0D, currentVelocity.dot(heading));
 		float relativeYaw = pilot != null ? Mth.clamp(Mth.wrapDegrees(pilot.getYRot() - this.getYRot()), -80.0F, 80.0F) : aiRelativeYaw;
 		float relativePitch = pilot != null ? Mth.clamp(Mth.wrapDegrees(pilot.getXRot() - this.getXRot()), -80.0F, 80.0F) : aiRelativePitch;
 		float controlEfficiency = Mth.clamp((float) (speed / getAirflowForFullControl()), 0.0F, 1.0F);
+		// NPCs need control authority during takeoff even if airflow is low
+		if (npc) {
+			controlEfficiency = Math.max(controlEfficiency, 0.55F);
+		}
 
 		if (pilot != null && !grounded) {
 			this.centerPilotLook(pilot, relativeYaw, relativePitch);
@@ -770,7 +905,12 @@ public class PlaneEntity extends Entity {
 			this.setRoll(Mth.approachDegrees(this.getRoll(), 0.0F, 4.0F));
 			this.setXRot(Mth.approach(this.getXRot(), 0.0F, 3.0F));
 
-			targetYawRate = this.getRudder() * GROUND_YAW_RATE;
+			// NPC ground steering via rudder + slight yaw from relative yaw command
+			float groundSteer = this.getRudder();
+			if (npc && Math.abs(relativeYaw) > 1.0F) {
+				groundSteer = Mth.clamp(relativeYaw / 40.0F, -1.0F, 1.0F);
+			}
+			targetYawRate = groundSteer * GROUND_YAW_RATE;
 		} else {
 			this.smoothedRelativeYaw += (relativeYaw - this.smoothedRelativeYaw) * INPUT_SMOOTHING;
 			this.smoothedRelativePitch += (relativePitch - this.smoothedRelativePitch) * INPUT_SMOOTHING;
@@ -779,18 +919,43 @@ public class PlaneEntity extends Entity {
 			float rollStep = 0.7F + 2.6F * controlEfficiency;
 			this.setRoll(Mth.approachDegrees(this.getRoll(), targetRoll, rollStep));
 
-			float pitchLeveling = -this.getXRot() * (0.012F + 0.018F * controlEfficiency);
-			float targetPitchRate = Mth.clamp(-this.smoothedRelativePitch * 0.025F * controlEfficiency + pitchLeveling, -getMaxPitchRate(), getMaxPitchRate());
-			this.pitchRate = Mth.approach(this.pitchRate, targetPitchRate, 0.16F);
+			float targetPitchRate;
+			if (npc) {
+				// Absolute pitch command (aiDesiredPitch): negative = climb with real vertical speed
+				float pitchError = this.aiDesiredPitch - this.getXRot();
+				targetPitchRate = Mth.clamp(pitchError * AI_PITCH_GAIN, -AI_MAX_PITCH_RATE, AI_MAX_PITCH_RATE);
+				// Reduce auto-level fight while AI is climbing
+				if (this.aiDesiredPitch < -5.0F) {
+					// no leveling pull toward 0
+				} else {
+					targetPitchRate += -this.getXRot() * 0.02F * controlEfficiency;
+				}
+			} else {
+				float pitchLeveling = -this.getXRot() * (0.012F + 0.018F * controlEfficiency);
+				targetPitchRate = Mth.clamp(
+					-this.smoothedRelativePitch * 0.025F * controlEfficiency + pitchLeveling,
+					-getMaxPitchRate(),
+					getMaxPitchRate()
+				);
+			}
+			float pitchApproach = npc ? 0.28F : 0.16F;
+			float maxRate = npc ? AI_MAX_PITCH_RATE : getMaxPitchRate();
+			this.pitchRate = Mth.approach(this.pitchRate, targetPitchRate, pitchApproach);
+			this.pitchRate = Mth.clamp(this.pitchRate, -maxRate, maxRate);
 			this.setXRot(Mth.clamp(this.getXRot() + this.pitchRate, -75.0F, 60.0F));
 
 			float bankTurn = (float) Math.sin(Math.toRadians(this.getRoll())) * (1.45F * controlEfficiency);
 			float rudderTurn = this.getRudder() * (0.35F + 1.15F * controlEfficiency);
 			float coordinatedTurn = this.smoothedRelativeYaw * 0.006F * controlEfficiency;
+			// NPCs: stronger yaw from bank/command so they can dodge obstacles
+			if (npc) {
+				bankTurn *= 1.25F;
+				coordinatedTurn = this.smoothedRelativeYaw * 0.02F * controlEfficiency;
+			}
 			targetYawRate = Mth.clamp(bankTurn + rudderTurn + coordinatedTurn, -getMaxYawRate(), getMaxYawRate());
 		}
 
-		float yawResponse = grounded ? GROUND_YAW_RESPONSE : 0.22F;
+		float yawResponse = grounded ? GROUND_YAW_RESPONSE : (npc ? 0.32F : 0.22F);
 		this.yawRate = Mth.clamp(Mth.approach(this.yawRate, targetYawRate, yawResponse), -getMaxYawRate(), getMaxYawRate());
 		this.setPlaneYaw(this.getYRot() + this.yawRate);
 
@@ -805,14 +970,24 @@ public class PlaneEntity extends Entity {
 			double liftY = this.calculateLiftY(speed);
 			double liftDeficit = liftY - GRAVITY;
 			if (liftDeficit < 0.0D) {
-				float stallPitch = (float) Mth.clamp(-liftDeficit * 34.0D, 0.0D, 2.2D);
+				// NPCs climbing hard: less stall nose-down punishment so they keep ascending
+				float stallPitch = (float) Mth.clamp(-liftDeficit * (npc && this.aiDesiredPitch < -8.0F ? 12.0D : 34.0D), 0.0D, 2.2D);
 				this.setXRot(Mth.clamp(this.getXRot() + stallPitch, -75.0F, 60.0F));
-				sink = Mth.clamp(liftDeficit * 1.45D, -0.10D, 0.0D);
+				sink = Mth.clamp(liftDeficit * (npc ? 0.85D : 1.45D), -0.10D, 0.0D);
 				heading = this.calculateHeading(this.getYRot(), this.getXRot());
 			}
 		}
 
 		Vec3 movement = heading.scale(speed).add(0.0D, sink, 0.0D);
+
+		// Guarantee a minimum climb rate for NPC when commanding nose-up and flying
+		if (npc && !grounded && this.aiDesiredPitch <= -12.0F && speed > 0.25D) {
+			double minClimb = this.aiDesiredPitch <= -28.0F ? 0.22D : 0.14D;
+			if (movement.y < minClimb) {
+				movement = new Vec3(movement.x, minClimb, movement.z);
+			}
+		}
+
 		if (grounded && speed == 0.0D && this.hasGroundIdlePower(currentThrottle)) {
 			movement = Vec3.ZERO;
 		}
@@ -821,6 +996,8 @@ public class PlaneEntity extends Entity {
 		if (grounded && speed == 0.0D) {
 			this.setDeltaMovement(Vec3.ZERO);
 		}
+
+		this.aiForceAirborne = false;
 	}
 
 	private void centerPilotLook(Player pilot, float relativeYaw, float relativePitch) {

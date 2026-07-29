@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.6
+
+- Villager pilot AI: real **takeoff rotation** (no longer stuck taxiing straight forever).
+- Villager pilot: **climbs** with commanded absolute pitch and a minimum vertical speed (~0.14–0.22 b/t) after liftoff.
+- Villager pilot: **obstacle avoidance** — multi-range terrain/heightmap scan, solid-block checks (trees/buildings), climb-over or bank toward freer side.
+
 ## 1.1.5
 
 - Add **survival crafting recipes** for all six aircraft, the paraglider backpack, and the squadron horn.
