@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    " G ",
+    "INI",
+    " I "
+  ],
+  "key": {
+    "G": "minecraft:gold_ingot",
+    "I": "minecraft:iron_ingot",
+    "N": "minecraft:note_block"
+  },
+  "result": {
+    "id": "peterwolfs_planes:squadron_horn",
+    "count": 1
+  }
+}

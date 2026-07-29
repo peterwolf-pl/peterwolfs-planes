@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "RGR",
+    "III",
+    " S "
+  ],
+  "key": {
+    "R": "minecraft:red_wool",
+    "G": "minecraft:gold_ingot",
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "peterwolfs_planes:triplane",
+    "count": 1
+  }
+}

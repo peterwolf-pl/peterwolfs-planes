@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "WPW",
+    "III",
+    "PSP"
+  ],
+  "key": {
+    "W": "minecraft:white_wool",
+    "P": "minecraft:oak_planks",
+    "I": "minecraft:iron_ingot",
+    "S": "minecraft:stick"
+  },
+  "result": {
+    "id": "peterwolfs_planes:large_plane",
+    "count": 1
+  }
+}

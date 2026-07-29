@@ -4,10 +4,10 @@
 
 ## 📌 Modrinth Summary (max ~140 characters)
 
-> Steerable biplanes with real flight physics, paragliding, squadron AI — and dogfight combat with guns & TNT bombs.
+> Steerable planes with flight physics, craftable aircraft, paragliding, squadron AI & dogfight guns/bombs.
 
 *(PL):*
-> Kierowalne dwupłatowce z fizyką lotu, paralotnią, AI eskadry oraz trybem walki powietrznej (karabiny i bomby TNT).
+> Kierowalne samoloty z fizyką lotu, recepturami, paralotnią, AI eskadry i walką powietrzną (karabiny/bomby).
 
 ---
 
@@ -16,7 +16,7 @@
 ```markdown
 # ✈️ Peter Wolf's Planes
 
-**Peter Wolf's Planes** adds steerable aircraft to Minecraft with custom 3D models, realistic-feeling flight physics, cockpit instrumentation, villager squadron AI, a paraglider backpack — and full **dogfight combat**.
+**Peter Wolf's Planes** adds steerable aircraft to Minecraft with custom 3D models, realistic-feeling flight physics, **survival crafting recipes**, cockpit instrumentation, villager squadron AI, a paraglider backpack — and full **dogfight combat**.
 
 ---
 
@@ -26,40 +26,123 @@
 |---|---|
 | **Biplane** | Classic starter plane |
 | **Large Biplane** | Bigger airframe |
-| **Large Twin-Engine Biplane** | Twin-engine hauler |
+| **Large Twin-Engine Biplane** | Twin-engine hauler (furnace “engines”) |
 | **Red Baron's Triplane** | Nimble WWI-style triplane |
-| **Water Plane** | Seaplane with floats |
+| **Water Plane** | Seaplane with floats (needs a boat in the recipe) |
 | **Monoplane** | Fast single-wing fighter (~2× top speed) |
 
 All craft use key-controlled throttle and rudder with mouse look for pitch/bank, plus a glassmorphic cockpit HUD (speed, altitude, V/S, throttle).
 
 ---
 
-## ⚔️ Dogfight Combat Mode (v1.1.0)
+## 🛠️ Crafting recipes (survival)
 
-While piloting, press **V** to arm combat mode (shown on the HUD as **Combat: ARMED**).
+Craft in a **Crafting Table**. Shapes are 3×3.
+
+### Biplane (`plane`)
+```
+W P W
+I I I
+  S
+```
+- **W** white wool · **P** oak planks · **I** iron ingot · **S** stick
+
+### Large Biplane
+```
+W P W
+I I I
+P S P
+```
+- **W** white wool · **P** oak planks · **I** iron ingot · **S** stick
+
+### Large Twin-Engine Biplane
+```
+I F I
+W P W
+I S I
+```
+- **I** iron ingot · **F** furnace · **W** white wool · **P** oak planks · **S** stick
+
+### Red Baron's Triplane
+```
+R G R
+I I I
+  S
+```
+- **R** red wool · **G** gold ingot · **I** iron ingot · **S** stick
+
+### Water Plane
+```
+  B
+W P W
+I I I
+```
+- **B** oak boat · **W** white wool · **P** oak planks · **I** iron ingot
+
+### Monoplane (fast fighter)
+```
+I D I
+W P W
+  S
+```
+- **I** iron ingot · **D** diamond · **W** white wool · **P** oak planks · **S** stick
+
+### Paraglider Backpack (chest armor)
+```
+L P L
+S W S
+L   L
+```
+- **L** leather · **P** phantom membrane · **S** string · **W** white wool
+
+### Squadron Horn
+```
+  G
+I N I
+  I
+```
+- **G** gold ingot · **I** iron ingot · **N** note block
+
+> **Villager Pilot Spawn Egg** is creative / loot / starter-kit only (not craftable).
+
+---
+
+## ⚔️ Dogfight Combat Mode
+
+While piloting, press **V** to arm combat mode (HUD: **Combat: ARMED**).
 
 | Control | Action |
 |---|---|
 | **V** | Toggle combat mode (ARMED / SAFE) |
-| **Left Mouse Button** | Fire twin machine guns (rapid dual tracers along the nose) |
-| **B** | Drop a **lit TNT** bomb (consumes 1× TNT; free in Creative) |
+| **Left Mouse Button** | Fire twin machine guns |
+| **B** | Drop a **lit TNT** bomb (1× TNT; free in Creative) |
 
-### Combat details
-- Machine guns fire dual streams from the wing roots with plane-relative muzzle velocity — no ammo required.
-- Bombs inherit most of the plane's velocity, fall under gravity with a short fuse, and explode on the ground (or mid-air when the fuse runs out).
-- Occupied aircraft can be damaged by projectiles and explosions. The HUD shows **airframe integrity**; at 0 HP the plane is destroyed and passengers are ejected.
-- Your own munitions will not damage the plane you are piloting.
-- Keybinds are remappable under **Controls → Peter Wolf's Planes**.
+- Machine guns: dual tracers along the nose, free ammo.
+- Bombs inherit plane velocity; short fuse.
+- Occupied airframes take projectile/explosion damage (HUD airframe HP).
+- Your own munitions do not damage your plane.
+- Keybinds: **Controls → Peter Wolf's Planes**.
 
 ---
 
-## 🪂 Paraglider & other features
+## 🪂 Paraglider
 
-- **Paraglider Backpack** (chest slot): deploy in free-fall for controlled descent with bank turns, flares, double-W dive, and spiral dives.
-- **Squadron Horn** + **Villager Pilot**: recruit AI wingmen into a V-formation.
-- **Tail push**: approach the tail of an empty plane and hold **Shift + Right-Click** to wheelbarrow-push it on the ground.
+- Equip **Paraglider Backpack** in the chest slot.
+- Deploys in free-fall (after enough fall distance).
+- **A/D** bank · **W** dive · **S** flare · **double-W** sprint dive · **double-A/D** spiral · **double-S** lock minimum sink.
+- **Ridge lift** on large slopes (≥10×10×10 height/length/width).
+- **H** — LIFT HUD (climb / sink + ridge strength).
+- `/liftparticles` — optional rising-cloud visualization of updrafts.
+
+---
+
+## 🪖 Other features
+
+- **Squadron Horn** + **Villager Pilot**: V-formation wingmen.
+- **Tail push**: empty plane, approach tail, **Shift + Right-Click**.
 - Worldgen **runway** structures with loot.
+- Starter kit (ops): `/planes kit` or `/planekit` — all aircraft + paraglider.
+- Optional first-join datapack: `peterwolfs-planes-starter-datapack.zip`.
 
 ---
 
@@ -73,13 +156,24 @@ While piloting, press **V** to arm combat mode (shown on the HUD as **Combat: AR
 
 ---
 
-## 📝 Version 1.1.0 changelog (paste into Modrinth version notes)
+## 📝 Version notes (paste into Modrinth release)
 
+### 1.1.5
 ```markdown
-### Dogfight combat mode
-- Toggle combat mode with **V** while piloting (HUD: ARMED / SAFE).
-- **Left mouse**: twin machine guns (rapid dual fire along heading, free ammo).
-- **B**: drop lit TNT (uses 1× TNT from inventory; free in Creative).
-- Airframe HP vs projectiles/explosions; destroyed planes eject the pilot.
-- Remappable keybinds under *Peter Wolf's Planes*.
+### Crafting recipes
+- Survival recipes for all 6 aircraft, the paraglider backpack, and the squadron horn.
+- See description for 3×3 patterns and materials.
+```
+
+### 1.1.4
+```markdown
+### Starter kit
+- `/planes kit` / `/planekit` (ops) — all aircraft + paraglider + TNT.
+- Optional first-join datapack for servers.
+```
+
+### 1.1.0–1.1.3 (highlights)
+```markdown
+- Dogfight combat (V / LMB / B), airframe HP.
+- Paraglider double-S min-sink lock, ridge lift, LIFT HUD (H), lift particles.
 ```

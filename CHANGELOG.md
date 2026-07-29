@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.5
+
+- Add **survival crafting recipes** for all six aircraft, the paraglider backpack, and the squadron horn.
+- Update Modrinth description with full recipe patterns (`MODRINTH_PAGE.md`).
+
 ## 1.1.4
 
 - **Starter kit** for servers: every aircraft + paraglider (+ horn, pilot eggs, TNT).

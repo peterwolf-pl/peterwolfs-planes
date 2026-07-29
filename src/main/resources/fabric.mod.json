@@ -3,7 +3,7 @@
 	"id": "peterwolfs_planes",
 	"version": "${version}",
 	"name": "Peter Wolf's Planes",
-	"description": "Steerable biplanes with custom flight physics, plus dogfight combat mode with twin machine guns and TNT bombardment.",
+	"description": "Steerable craftable planes with flight physics, paragliding, squadron AI, and dogfight combat (guns & TNT bombs).",
 	"authors": [
 		"Piotrek"
 	],
