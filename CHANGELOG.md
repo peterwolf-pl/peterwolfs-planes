@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1
+
+- Paraglider: **double-tap S** toggles **locked minimum-sink** (stays on without holding S; double-tap S again to unlock). Slightly flatter glide than hold-S flare (0.5 blocks lost per 10 horizontal).
+- Paraglider: **ridge lift** over slopes — updrafts appear only on faces that are at least **10×10×10** (height × length × width). Taller and steeper faces produce stronger lift and can make the pilot climb.
+- Dive inputs (W / spirals) still override locked S; releasing them returns to the locked sink mode.
+
 ## 1.1.0
 
 - Add **dogfight combat mode** for all aircraft (toggle with **V** while piloting).

@@ -21,5 +21,7 @@
   "key.peterwolfs_planes.drop_bomb": "Zrzuć bombę TNT",
   "message.peterwolfs_planes.combat_armed": "Tryb walki UZBROJONY — LPM karabiny, B bomba",
   "message.peterwolfs_planes.combat_safe": "Tryb walki BEZPIECZNY",
-  "message.peterwolfs_planes.need_tnt": "Potrzebujesz TNT w ekwipunku, by bombardować"
+  "message.peterwolfs_planes.need_tnt": "Potrzebujesz TNT w ekwipunku, by bombardować",
+  "message.peterwolfs_planes.flare_locked": "Minimalny opad ZABLOKOWANY (podwójne S = odblokuj)",
+  "message.peterwolfs_planes.flare_unlocked": "Minimalny opad odblokowany"
 }

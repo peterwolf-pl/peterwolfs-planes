@@ -21,5 +21,7 @@
   "key.peterwolfs_planes.drop_bomb": "Drop TNT Bomb",
   "message.peterwolfs_planes.combat_armed": "Combat mode ARMED — LMB guns, B bomb",
   "message.peterwolfs_planes.combat_safe": "Combat mode SAFE",
-  "message.peterwolfs_planes.need_tnt": "Need TNT in inventory to bomb"
+  "message.peterwolfs_planes.need_tnt": "Need TNT in inventory to bomb",
+  "message.peterwolfs_planes.flare_locked": "Minimum sink LOCKED (double-tap S to unlock)",
+  "message.peterwolfs_planes.flare_unlocked": "Minimum sink unlocked"
 }

@@ -2,6 +2,7 @@ package com.piotrek.peterwolfsplanes.client;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import com.piotrek.peterwolfsplanes.ParagliderFlightMode;
+import com.piotrek.peterwolfsplanes.ParagliderRidgeLift;
 import com.piotrek.peterwolfsplanes.PeterwolfsPlanesMod;
 import com.piotrek.peterwolfsplanes.entity.PlaneEntity;
 import com.piotrek.peterwolfsplanes.network.ParagliderInputPayload;
@@ -19,6 +20,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.model.geom.ModelLayerLocation;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 
@@ -46,6 +48,11 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 	private static int dTapTimer = 0;
 	private static boolean wasDDown = false;
 	private static boolean isDoubleDTapped = false;
+
+	/** Double-tap S locks minimum-sink (LOCKED_FLARE) until toggled off. */
+	private static int sTapTimer = 0;
+	private static boolean wasSDown = false;
+	private static boolean isFlareLocked = false;
 
 	public static final ModelLayerLocation PLANE_MODEL_LAYER = new ModelLayerLocation(
 		Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "plane"),
@@ -228,6 +235,23 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 							isDoubleDTapped = false;
 						}
 
+						// Double S tap: toggle permanent minimum-sink (LOCKED_FLARE)
+						if (sTapTimer > 0) sTapTimer--;
+						if (keyDown && !wasSDown) {
+							if (sTapTimer > 0) {
+								isFlareLocked = !isFlareLocked;
+								sTapTimer = 0;
+								client.player.sendOverlayMessage(Component.translatable(
+									isFlareLocked
+										? "message.peterwolfs_planes.flare_locked"
+										: "message.peterwolfs_planes.flare_unlocked"
+								));
+							} else {
+								sTapTimer = 8;
+							}
+						}
+						wasSDown = keyDown;
+
 						boolean spiralLeft = isDoubleATapped && keyLeft;
 						boolean spiralRight = isDoubleDTapped && keyRight;
 						boolean doubleWDive = isDoubleWTapped && keyUp;
@@ -242,6 +266,9 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 							flightMode = ParagliderFlightMode.DOUBLE_W;
 						} else if (keyUp) {
 							flightMode = ParagliderFlightMode.SINGLE_W;
+						} else if (isFlareLocked) {
+							// Locked S: stay in minimum sink until double-S again
+							flightMode = ParagliderFlightMode.LOCKED_FLARE;
 						} else if (keyDown) {
 							flightMode = ParagliderFlightMode.FLARE;
 						} else {
@@ -276,7 +303,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 							targetPitch = 25.0f;
 						} else if (flightMode == ParagliderFlightMode.SINGLE_W) {
 							targetPitch = 20.0f;
-						} else if (flightMode == ParagliderFlightMode.FLARE) {
+						} else if (flightMode.isFlareFamily()) {
 							targetPitch = -18.0f;
 						}
 						paragliderPitch = paragliderPitch + (targetPitch - paragliderPitch) * 0.2f;
@@ -285,7 +312,17 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 						double moveX = -Math.sin(rad) * flightMode.horizontalSpeed();
 						double moveZ = Math.cos(rad) * flightMode.horizontalSpeed();
 
-						client.player.setDeltaMovement(new Vec3(moveX, flightMode.verticalSpeed(), moveZ));
+						double ridgeLift = ParagliderRidgeLift.sampleLift(
+							client.player.level(),
+							client.player.getX(),
+							client.player.getY(),
+							client.player.getZ()
+						);
+						client.player.setDeltaMovement(new Vec3(
+							moveX,
+							flightMode.verticalSpeed() + ridgeLift,
+							moveZ
+						));
 						client.player.fallDistance = 0.0F;
 
 						if (flightMode != lastSentParagliderMode) {
@@ -296,12 +333,14 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 						paragliderRoll = 0.0f;
 						paragliderPitch = 0.0f;
 						isDoubleWTapped = false;
+						isFlareLocked = false;
 						lastSentParagliderMode = null;
 					}
 				} else {
 					paragliderRoll = 0.0f;
 					paragliderPitch = 0.0f;
 					isDoubleWTapped = false;
+					isFlareLocked = false;
 					lastSentParagliderMode = null;
 				}
 

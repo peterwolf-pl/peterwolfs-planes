@@ -79,7 +79,12 @@ public class ParagliderHandler {
 						double moveX = horizLen > 0.001D ? (look.x / horizLen) * mode.horizontalSpeed() : 0.0D;
 						double moveZ = horizLen > 0.001D ? (look.z / horizLen) * mode.horizontalSpeed() : 0.0D;
 
-						player.setDeltaMovement(new Vec3(moveX, mode.verticalSpeed(), moveZ));
+						double ridgeLift = ParagliderRidgeLift.sampleLift(
+							player.level(), player.getX(), player.getY(), player.getZ()
+						);
+						double vertical = mode.verticalSpeed() + ridgeLift;
+
+						player.setDeltaMovement(new Vec3(moveX, vertical, moveZ));
 
 						player.hurtMarked = true;
 						player.fallDistance = 0.0F;

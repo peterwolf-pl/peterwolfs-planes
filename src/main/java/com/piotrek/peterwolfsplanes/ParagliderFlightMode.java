@@ -13,7 +13,13 @@ public enum ParagliderFlightMode {
 	DOUBLE_W(2, 1.10D, 0.50D),
 	SPIRAL(3, 0.40D, 0.40D),
 	DOUBLE_W_SPIRAL(4, 1.10D, 0.80D),
-	FLARE(5, 0.25D, 0.08D);
+	/** Hold S — slow forward, shallow sink. */
+	FLARE(5, 0.25D, 0.08D),
+	/**
+	 * Double-tap S lock — same shallow sink as flare, stays on until unlocked
+	 * (double-tap S again) or deployment ends. Dive inputs (W / spirals) still override.
+	 */
+	LOCKED_FLARE(6, 0.25D, 0.05D);
 
 	private final int networkId;
 	private final double horizontalSpeed;
@@ -43,6 +49,10 @@ public enum ParagliderFlightMode {
 
 	public double descentPerTenHorizontalBlocks() {
 		return descentRatio * 10.0D;
+	}
+
+	public boolean isFlareFamily() {
+		return this == FLARE || this == LOCKED_FLARE;
 	}
 
 	public static ParagliderFlightMode fromNetworkId(int networkId) {
