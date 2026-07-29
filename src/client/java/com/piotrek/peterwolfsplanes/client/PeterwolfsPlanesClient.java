@@ -505,44 +505,68 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					graphicsExtractor.text(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
 				}
 
-				// Ridge-lift HUD (H) — top-right panel
+				// LIFT HUD (H) — climb / sink + ridge updraft
 				if (liftHudVisible && client.player != null && client.level != null) {
 					Font font = client.font;
-					double lift = ParagliderRidgeLift.sampleLift(
+
+					// Actual vertical speed of the player (blocks/tick → m/s)
+					double vyBt = client.player.getDeltaMovement().y;
+					double vyMs = vyBt * 20.0D;
+					String trend;
+					int trendColor;
+					if (vyMs > 0.15D) {
+						trend = "CLIMB"; // wznoszenie
+						trendColor = 0xFF55FF55;
+					} else if (vyMs < -0.15D) {
+						trend = "SINK"; // opadanie
+						trendColor = 0xFFFF5555;
+					} else {
+						trend = "LEVEL";
+						trendColor = 0xFFCCCCCC;
+					}
+					String vsText = String.format("V/S: %s  %+.2f m/s  (%+.3f b/t)", trend, vyMs, vyBt);
+
+					// Ridge updraft contribution (prąd wznoszący)
+					double ridge = ParagliderRidgeLift.sampleLift(
 						client.level,
 						client.player.getX(),
 						client.player.getY(),
 						client.player.getZ()
 					);
-					double liftMs = lift * 20.0D;
-					String strength;
-					int strengthColor;
-					if (lift < 0.008D) {
-						strength = "NONE";
-						strengthColor = 0xFF888888;
-					} else if (lift < 0.04D) {
-						strength = "WEAK";
-						strengthColor = 0xFF55FFFF;
-					} else if (lift < 0.09D) {
-						strength = "MED";
-						strengthColor = 0xFF55FF55;
+					double ridgeMs = ridge * 20.0D;
+					String ridgeLabel;
+					int ridgeColor;
+					if (ridge < 0.008D) {
+						ridgeLabel = "NONE";
+						ridgeColor = 0xFF888888;
+					} else if (ridge < 0.04D) {
+						ridgeLabel = "WEAK";
+						ridgeColor = 0xFF55FFFF;
+					} else if (ridge < 0.09D) {
+						ridgeLabel = "MED";
+						ridgeColor = 0xFF55FF55;
 					} else {
-						strength = "STRONG";
-						strengthColor = 0xFFFFFF55;
+						ridgeLabel = "STRONG";
+						ridgeColor = 0xFFFFFF55;
+					}
+					String ridgeText = String.format("Ridge: %s  %+.2f m/s", ridgeLabel, ridgeMs);
+
+					String modeHint;
+					if (isParagliderVisuallyDeployed(client.player.getId())) {
+						modeHint = isFlareLocked ? "Min-sink LOCKED" : "Paraglider";
+					} else {
+						modeHint = "H hide · /liftparticles";
 					}
 
-					String valueText = String.format("%s  %+.2f b/t  (%+.1f m/s)", strength, lift, liftMs);
-					String hint = isParagliderVisuallyDeployed(client.player.getId())
-						? (isFlareLocked ? "Min-sink LOCKED" : "Paraglider deployed")
-						: "H hide · /liftparticles";
-
 					int screenWidth = client.getWindow().getGuiScaledWidth();
-					int boxWidth = 186;
-					int boxHeight = 50;
+					int boxWidth = 200;
+					int boxHeight = 62;
 					int boxX = screenWidth - boxWidth - 8;
 					int boxY = 8;
 					int barW = boxWidth - 16;
-					int fill = (int) (barW * Mth.clamp(lift / ParagliderRidgeLift.MAX_LIFT, 0.0D, 1.0D));
+					int barX = boxX + 8;
+					int barY = boxY + 53;
+					int barH = 4;
 
 					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x99000000);
 					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF55AAFF);
@@ -551,11 +575,24 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					graphicsExtractor.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
 
 					graphicsExtractor.text(font, "LIFT", boxX + 8, boxY + 5, 0xFF55AAFF, false);
-					graphicsExtractor.text(font, valueText, boxX + 8, boxY + 17, strengthColor, false);
-					graphicsExtractor.text(font, hint, boxX + 8, boxY + 29, 0xFFAAAAAA, false);
-					graphicsExtractor.fill(boxX + 8, boxY + 42, boxX + 8 + barW, boxY + 45, 0xFF333333);
-					if (fill > 0) {
-						graphicsExtractor.fill(boxX + 8, boxY + 42, boxX + 8 + fill, boxY + 45, strengthColor);
+					graphicsExtractor.text(font, vsText, boxX + 8, boxY + 17, trendColor, false);
+					graphicsExtractor.text(font, ridgeText, boxX + 8, boxY + 29, ridgeColor, false);
+					graphicsExtractor.text(font, modeHint, boxX + 8, boxY + 41, 0xFFAAAAAA, false);
+
+					// Centered V/S bar: left = sink (red), right = climb (green)
+					// Scale: ±4 m/s full deflection
+					double vsScale = 4.0D;
+					double frac = Mth.clamp(vyMs / vsScale, -1.0D, 1.0D);
+					int mid = barX + barW / 2;
+					graphicsExtractor.fill(barX, barY, barX + barW, barY + barH, 0xFF333333);
+					// zero marker
+					graphicsExtractor.fill(mid - 1, barY - 1, mid + 1, barY + barH + 1, 0xFFAAAAAA);
+					if (frac > 0.0D) {
+						int fill = (int) (barW / 2.0D * frac);
+						graphicsExtractor.fill(mid, barY, mid + fill, barY + barH, 0xFF55FF55);
+					} else if (frac < 0.0D) {
+						int fill = (int) (barW / 2.0D * -frac);
+						graphicsExtractor.fill(mid - fill, barY, mid, barY + barH, 0xFFFF5555);
 					}
 				}
 			}

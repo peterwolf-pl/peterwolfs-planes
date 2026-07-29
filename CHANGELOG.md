@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3
+
+- LIFT HUD (**H**): clearly shows **climb / sink / level** with real vertical speed (m/s and b/t), plus ridge updraft strength. Centered bar: green = climb, red = descent.
+
 ## 1.1.2
 
 - Paraglider: **LIFT HUD** toggle with **H** — top-right panel shows ridge-lift strength (NONE / WEAK / MED / STRONG), b/t and m/s, plus a fill bar.
