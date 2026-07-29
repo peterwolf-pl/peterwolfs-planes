@@ -101,7 +101,15 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		InputConstants.KEY_B,
 		PLANES_CATEGORY
 	));
+	/** Toggle ridge-lift strength HUD. Default: H */
+	public static final KeyMapping TOGGLE_LIFT_HUD = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+		"key.peterwolfs_planes.toggle_lift_hud",
+		InputConstants.Type.KEYSYM,
+		InputConstants.KEY_H,
+		PLANES_CATEGORY
+	));
 
+	private static boolean liftHudVisible = false;
 	private static float lastSentThrottle = -1.0f;
 	private static float lastSentRoll = 999.0f;
 	private static boolean lastSentCombatMode = false;
@@ -183,6 +191,15 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		// Client Input & Prediction Loop
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player != null) {
+				while (TOGGLE_LIFT_HUD.consumeClick()) {
+					liftHudVisible = !liftHudVisible;
+					client.player.sendOverlayMessage(Component.translatable(
+						liftHudVisible
+							? "message.peterwolfs_planes.lift_hud_on"
+							: "message.peterwolfs_planes.lift_hud_off"
+					));
+				}
+
 				previousParagliderRoll = paragliderRoll;
 				previousParagliderPitch = paragliderPitch;
 
@@ -486,6 +503,60 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					graphicsExtractor.text(font, combatText, boxX + 8, boxY + 54, combatColor, false);
 					graphicsExtractor.text(font, hpText, boxX + 8, boxY + 66, hpColor, false);
 					graphicsExtractor.text(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
+				}
+
+				// Ridge-lift HUD (H) — top-right panel
+				if (liftHudVisible && client.player != null && client.level != null) {
+					Font font = client.font;
+					double lift = ParagliderRidgeLift.sampleLift(
+						client.level,
+						client.player.getX(),
+						client.player.getY(),
+						client.player.getZ()
+					);
+					double liftMs = lift * 20.0D;
+					String strength;
+					int strengthColor;
+					if (lift < 0.008D) {
+						strength = "NONE";
+						strengthColor = 0xFF888888;
+					} else if (lift < 0.04D) {
+						strength = "WEAK";
+						strengthColor = 0xFF55FFFF;
+					} else if (lift < 0.09D) {
+						strength = "MED";
+						strengthColor = 0xFF55FF55;
+					} else {
+						strength = "STRONG";
+						strengthColor = 0xFFFFFF55;
+					}
+
+					String valueText = String.format("%s  %+.2f b/t  (%+.1f m/s)", strength, lift, liftMs);
+					String hint = isParagliderVisuallyDeployed(client.player.getId())
+						? (isFlareLocked ? "Min-sink LOCKED" : "Paraglider deployed")
+						: "H hide · /liftparticles";
+
+					int screenWidth = client.getWindow().getGuiScaledWidth();
+					int boxWidth = 186;
+					int boxHeight = 50;
+					int boxX = screenWidth - boxWidth - 8;
+					int boxY = 8;
+					int barW = boxWidth - 16;
+					int fill = (int) (barW * Mth.clamp(lift / ParagliderRidgeLift.MAX_LIFT, 0.0D, 1.0D));
+
+					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x99000000);
+					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF55AAFF);
+					graphicsExtractor.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
+					graphicsExtractor.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF555555);
+					graphicsExtractor.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
+
+					graphicsExtractor.text(font, "LIFT", boxX + 8, boxY + 5, 0xFF55AAFF, false);
+					graphicsExtractor.text(font, valueText, boxX + 8, boxY + 17, strengthColor, false);
+					graphicsExtractor.text(font, hint, boxX + 8, boxY + 29, 0xFFAAAAAA, false);
+					graphicsExtractor.fill(boxX + 8, boxY + 42, boxX + 8 + barW, boxY + 45, 0xFF333333);
+					if (fill > 0) {
+						graphicsExtractor.fill(boxX + 8, boxY + 42, boxX + 8 + fill, boxY + 45, strengthColor);
+					}
 				}
 			}
 		);

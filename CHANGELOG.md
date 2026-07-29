@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.2
+
+- Paraglider: **LIFT HUD** toggle with **H** — top-right panel shows ridge-lift strength (NONE / WEAK / MED / STRONG), b/t and m/s, plus a fill bar.
+- Paraglider: **ridge-lift particles** via `/liftparticles` or `/planes liftparticles [true|false]` — rising cloud / ash / end-rod particles mark updrafts around the pilot (per-player, toggle).
+
 ## 1.1.1
 
 - Paraglider: **double-tap S** toggles **locked minimum-sink** (stays on without holding S; double-tap S again to unlock). Slightly flatter glide than hold-S flare (0.5 blocks lost per 10 horizontal).

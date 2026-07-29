@@ -23,5 +23,11 @@
   "message.peterwolfs_planes.combat_safe": "Combat mode SAFE",
   "message.peterwolfs_planes.need_tnt": "Need TNT in inventory to bomb",
   "message.peterwolfs_planes.flare_locked": "Minimum sink LOCKED (double-tap S to unlock)",
-  "message.peterwolfs_planes.flare_unlocked": "Minimum sink unlocked"
+  "message.peterwolfs_planes.flare_unlocked": "Minimum sink unlocked",
+  "message.peterwolfs_planes.lift_hud_on": "LIFT HUD ON (H to hide)",
+  "message.peterwolfs_planes.lift_hud_off": "LIFT HUD OFF",
+  "key.peterwolfs_planes.toggle_lift_hud": "Toggle LIFT HUD",
+  "command.peterwolfs_planes.players_only": "This command can only be used by a player",
+  "command.peterwolfs_planes.liftparticles_on": "Ridge-lift particles ON — rising clouds mark updrafts",
+  "command.peterwolfs_planes.liftparticles_off": "Ridge-lift particles OFF"
 }

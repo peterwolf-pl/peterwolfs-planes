@@ -23,5 +23,11 @@
   "message.peterwolfs_planes.combat_safe": "Tryb walki BEZPIECZNY",
   "message.peterwolfs_planes.need_tnt": "Potrzebujesz TNT w ekwipunku, by bombardować",
   "message.peterwolfs_planes.flare_locked": "Minimalny opad ZABLOKOWANY (podwójne S = odblokuj)",
-  "message.peterwolfs_planes.flare_unlocked": "Minimalny opad odblokowany"
+  "message.peterwolfs_planes.flare_unlocked": "Minimalny opad odblokowany",
+  "message.peterwolfs_planes.lift_hud_on": "HUD LIFT WŁĄCZONY (H = ukryj)",
+  "message.peterwolfs_planes.lift_hud_off": "HUD LIFT WYŁĄCZONY",
+  "key.peterwolfs_planes.toggle_lift_hud": "Przełącz HUD LIFT",
+  "command.peterwolfs_planes.players_only": "Tej komendy może użyć tylko gracz",
+  "command.peterwolfs_planes.liftparticles_on": "Cząsteczki prądów wznoszących WŁĄCZONE",
+  "command.peterwolfs_planes.liftparticles_off": "Cząsteczki prądów wznoszących WYŁĄCZONE"
 }

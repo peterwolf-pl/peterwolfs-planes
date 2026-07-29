@@ -215,8 +215,10 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 		PayloadTypeRegistry.serverboundPlay().register(ParagliderInputPayload.TYPE, ParagliderInputPayload.CODEC);
 		PayloadTypeRegistry.clientboundPlay().register(ParagliderSyncPayload.TYPE, ParagliderSyncPayload.CODEC);
 
-		// Initialize Paraglider Server Handler
+		// Initialize Paraglider Server Handler + ridge-lift particle viz + commands
 		ParagliderHandler.register();
+		ParagliderLiftParticles.register();
+		PeterwolfsPlanesCommands.register();
 
 		// Handle C2S Inputs (flight + dogfight combat)
 		ServerPlayNetworking.registerGlobalReceiver(PlaneInputPayload.TYPE, (payload, context) -> {

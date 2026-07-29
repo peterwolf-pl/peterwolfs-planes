@@ -15,7 +15,7 @@ public final class ParagliderRidgeLift {
 	public static final int MIN_SIZE = 10;
 
 	/** Max extra upward velocity from a huge cliff face (blocks / tick). */
-	private static final double MAX_LIFT = 0.18D;
+	public static final double MAX_LIFT = 0.18D;
 	/** Horizontal reach of the lift band past the face. */
 	private static final double LIFT_BAND = 14.0D;
 	/** How far above the ridge crest lift still works. */
