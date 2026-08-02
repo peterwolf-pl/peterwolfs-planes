@@ -2,6 +2,12 @@
 
 Small extension surface for other mods (e.g. Forest Fire water bomber) that subclass `PlaneEntity` / `LargePlaneEntity` without reimplementing flight.
 
+## Independence
+
+- **Peterwolf's Planes does not depend on Forest Fire** (or any other specialized aircraft mod).
+- Optional content (water bomber, cargo, etc.) is owned by the other mod and only loads when Planes is present.
+- Installing Planes alone never pulls in Forest Fire.
+
 ## Interfaces
 
 ### `com.piotrek.peterwolfsplanes.api.SpecializedPlaneControls`
