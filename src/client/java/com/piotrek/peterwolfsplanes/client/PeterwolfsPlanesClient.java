@@ -117,6 +117,14 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 	private static ParagliderFlightMode lastSentParagliderMode;
 	private static boolean combatModeActive = false;
 
+	/** True when the plane uses dogfight V/B combat bindings (default). */
+	private static boolean usesCombatControls(PlaneEntity plane) {
+		if (plane instanceof com.piotrek.peterwolfsplanes.api.SpecializedPlaneControls specialized) {
+			return specialized.usesCombatControls();
+		}
+		return true;
+	}
+
 	public static boolean isParagliderVisuallyDeployed(int entityId) {
 		Minecraft client = Minecraft.getInstance();
 		Entity entity = client.level == null ? null : client.level.getEntity(entityId);
@@ -191,7 +199,13 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		// Client Input & Prediction Loop
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			if (client.player != null) {
+				boolean specializedPilot = client.player.getVehicle() instanceof PlaneEntity vehicle
+					&& !usesCombatControls(vehicle);
 				while (TOGGLE_LIFT_HUD.consumeClick()) {
+					// Specialized aircraft (e.g. water bomber) reclaim H for equipment.
+					if (specializedPilot) {
+						continue;
+					}
 					liftHudVisible = !liftHudVisible;
 					client.player.sendOverlayMessage(Component.translatable(
 						liftHudVisible
@@ -381,35 +395,52 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 						rudder = 1.0f;
 					}
 
-					// Edge-triggered combat arming / bomb release
-					while (TOGGLE_COMBAT.consumeClick()) {
-						combatModeActive = !combatModeActive;
+					boolean combatControls = usesCombatControls(plane);
+
+					// Edge-triggered combat arming / bomb release (skipped for specialized aircraft)
+					if (combatControls) {
+						while (TOGGLE_COMBAT.consumeClick()) {
+							combatModeActive = !combatModeActive;
+						}
+					} else {
+						// Drain combat key clicks so they do not accumulate while specialized controls run
+						while (TOGGLE_COMBAT.consumeClick()) {
+							// no-op
+						}
+						while (DROP_BOMB.consumeClick()) {
+							// no-op — specialized mod handles B
+						}
+						combatModeActive = false;
 					}
 
-					boolean fireGuns = combatModeActive && client.options.keyAttack.isDown();
+					boolean fireGuns = combatControls && combatModeActive && client.options.keyAttack.isDown();
 					boolean dropBomb = false;
-					while (DROP_BOMB.consumeClick()) {
-						if (combatModeActive) {
-							dropBomb = true;
+					if (combatControls) {
+						while (DROP_BOMB.consumeClick()) {
+							if (combatModeActive) {
+								dropBomb = true;
+							}
 						}
 					}
 
 					plane.setThrottle(t);
 					plane.setRudder(rudder);
 					// Local prediction of combat flag for HUD
-					plane.setCombatMode(combatModeActive);
+					plane.setCombatMode(combatControls && combatModeActive);
 
 					boolean shouldSend = t != lastSentThrottle
 						|| rudder != lastSentRoll
-						|| combatModeActive != lastSentCombatMode
+						|| (combatControls && combatModeActive != lastSentCombatMode)
 						|| fireGuns != lastSentFireGuns
 						|| dropBomb;
 					if (shouldSend) {
 						lastSentThrottle = t;
 						lastSentRoll = rudder;
-						lastSentCombatMode = combatModeActive;
+						lastSentCombatMode = combatControls && combatModeActive;
 						lastSentFireGuns = fireGuns;
-						ClientPlayNetworking.send(new PlaneInputPayload(t, rudder, combatModeActive, fireGuns, dropBomb));
+						ClientPlayNetworking.send(new PlaneInputPayload(
+							t, rudder, combatControls && combatModeActive, fireGuns, dropBomb
+						));
 					}
 				} else {
 					lastSentThrottle = -1.0f;
@@ -460,7 +491,8 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 						throttleColor = 0xFFFFAA00; // orange
 					}
 
-					boolean combat = plane.isCombatMode();
+					boolean showCombatHud = usesCombatControls(plane);
+					boolean combat = showCombatHud && plane.isCombatMode();
 					String combatText = combat ? "Combat: ARMED" : "Combat: SAFE";
 					int combatColor = combat ? 0xFFFF5555 : 0xFFAAAAAA;
 					float hp = plane.getCombatHealth();
@@ -484,7 +516,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					int screenWidth = client.getWindow().getGuiScaledWidth();
 					int screenHeight = client.getWindow().getGuiScaledHeight();
 					int boxWidth = 168;
-					int boxHeight = 93;
+					int boxHeight = showCombatHud ? 93 : 58;
 					int boxX = (screenWidth - boxWidth) / 2;
 					int boxY = (screenHeight - boxHeight) / 2 + (int) (screenHeight * 0.18);
 					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x88000000); // 50% opacity black
@@ -500,9 +532,11 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					graphicsExtractor.text(font, altText, boxX + 8, boxY + 18, 0xFFFFFFFF, false);
 					graphicsExtractor.text(font, vsText, boxX + 8, boxY + 30, vsColor, false);
 					graphicsExtractor.text(font, throttleText, boxX + 8, boxY + 42, throttleColor, false);
-					graphicsExtractor.text(font, combatText, boxX + 8, boxY + 54, combatColor, false);
-					graphicsExtractor.text(font, hpText, boxX + 8, boxY + 66, hpColor, false);
-					graphicsExtractor.text(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
+					if (showCombatHud) {
+						graphicsExtractor.text(font, combatText, boxX + 8, boxY + 54, combatColor, false);
+						graphicsExtractor.text(font, hpText, boxX + 8, boxY + 66, hpColor, false);
+						graphicsExtractor.text(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
+					}
 				}
 
 				// LIFT HUD (H) — climb / sink + ridge updraft

@@ -819,6 +819,21 @@ public class PlaneEntity extends Entity {
 	protected float getMaxYawRate() { return MAX_YAW_RATE; }
 	protected float getMaxPitchRate() { return MAX_PITCH_RATE; }
 
+	/**
+	 * Cargo mass relative to empty airframe. 1.0 = empty.
+	 * Specialized planes may implement {@link com.piotrek.peterwolfsplanes.api.PlaneCargoMass}.
+	 */
+	protected float getCargoMassFactor() {
+		if (this instanceof com.piotrek.peterwolfsplanes.api.PlaneCargoMass cargo) {
+			float factor = cargo.getCargoMassFactor();
+			if (!Float.isFinite(factor)) {
+				return 1.0F;
+			}
+			return Mth.clamp(factor, 0.5F, 3.0F);
+		}
+		return 1.0F;
+	}
+
 	private void tickPhysics() {
 		if (this.isBeingPushed()) {
 			Entity pusherEntity = this.level().getEntity(this.getPusherId());
@@ -1011,9 +1026,10 @@ public class PlaneEntity extends Entity {
 	}
 
 	private double applyForces(double speed, Vec3 heading, float currentThrottle, boolean grounded) {
-		double thrustForce = this.enginePower * getThrustForce();
-		double gravityAssist = -GRAVITY * heading.y * 0.85D;
-		double dragForce = speed * (getBaseDrag() + Math.min(speed, 1.6D) * getSpeedDrag());
+		double mass = Math.max(0.5D, this.getCargoMassFactor());
+		double thrustForce = this.enginePower * getThrustForce() / mass;
+		double gravityAssist = -GRAVITY * heading.y * 0.85D * mass;
+		double dragForce = speed * (getBaseDrag() * mass + Math.min(speed, 1.6D) * getSpeedDrag() * Math.sqrt(mass));
 		speed = Math.max(0.0D, speed + thrustForce + gravityAssist - dragForce);
 
 		if (grounded) {
