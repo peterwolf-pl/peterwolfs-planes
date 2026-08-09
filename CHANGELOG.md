@@ -1,12 +1,16 @@
 # Changelog
 
-## 1.1.7
+## 1.1.8
 
 - Paraglider: **brake lines** from each hand to the trailing edge near the wing tips (main riser + 3 thin branches per side, dark graphite/red, slightly more visible than suspension lines).
 - Paraglider: pilot **hand animation** follows real A/D (and double-tap spiral) steering — active hand lowers smoothly; releases return to the neutral brake-handle pose.
 - Paraglider: turning side **brake line tightens** and tracks the animated hand; the opposite line stays neutral or slightly relaxed with a subtle sag (no rope physics).
 - Paraglider: **wing-tip deformation** on the steering side — tip and outer trailing edge bend down/back proportionally (~12° max tip, ~7% chord TE move); leading edge and span stay intact; visual only (no physics change).
 - First-person brake lines use a thinner translucent tint so they do not obstruct the view.
+
+## 1.1.7
+
+- Specialized aircraft API and cargo mass hooks.
 
 ## 1.1.6
 
