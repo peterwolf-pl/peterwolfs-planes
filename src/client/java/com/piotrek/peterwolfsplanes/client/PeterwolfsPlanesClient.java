@@ -35,8 +35,14 @@ import net.minecraft.world.phys.Vec3;
 public class PeterwolfsPlanesClient implements ClientModInitializer {
 	public static float paragliderRoll = 0.0f;
 	public static float paragliderPitch = 0.0f;
+	/** Left brake pull 0..1 from A / spiral-left (not from camera yaw). */
+	public static float paragliderLeftBrake = 0.0f;
+	/** Right brake pull 0..1 from D / spiral-right (not from camera yaw). */
+	public static float paragliderRightBrake = 0.0f;
 	private static float previousParagliderRoll = 0.0f;
 	private static float previousParagliderPitch = 0.0f;
+	private static float previousParagliderLeftBrake = 0.0f;
+	private static float previousParagliderRightBrake = 0.0f;
 	private static int wTapTimer = 0;
 	private static boolean wasWDown = false;
 	private static boolean isDoubleWTapped = false;
@@ -154,6 +160,34 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		return Mth.lerp(partialTick, previousParagliderPitch, paragliderPitch);
 	}
 
+	/**
+	 * Smoothed left brake input (0..1) driven by the same A / double-A steering
+	 * used for yaw and bank — not inferred from camera rotation alone.
+	 */
+	public static float getParagliderLeftBrakeForEntity(int entityId, float partialTick) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null
+			|| client.player.getId() != entityId
+			|| !isParagliderVisuallyDeployed(entityId)) {
+			return 0.0f;
+		}
+		return Mth.lerp(partialTick, previousParagliderLeftBrake, paragliderLeftBrake);
+	}
+
+	/**
+	 * Smoothed right brake input (0..1) driven by the same D / double-D steering
+	 * used for yaw and bank — not inferred from camera rotation alone.
+	 */
+	public static float getParagliderRightBrakeForEntity(int entityId, float partialTick) {
+		Minecraft client = Minecraft.getInstance();
+		if (client.player == null
+			|| client.player.getId() != entityId
+			|| !isParagliderVisuallyDeployed(entityId)) {
+			return 0.0f;
+		}
+		return Mth.lerp(partialTick, previousParagliderRightBrake, paragliderRightBrake);
+	}
+
 	@Override
 	public void onInitializeClient() {
 		// Register Entity Renderer
@@ -216,6 +250,8 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 
 				previousParagliderRoll = paragliderRoll;
 				previousParagliderPitch = paragliderPitch;
+				previousParagliderLeftBrake = paragliderLeftBrake;
+				previousParagliderRightBrake = paragliderRightBrake;
 
 				if (client.player.getItemBySlot(EquipmentSlot.CHEST).is(PeterwolfsPlanesMod.PARAGLIDER_BACKPACK)) {
 					if (isParagliderVisuallyDeployed(client.player.getId())) {
@@ -327,6 +363,23 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 						client.player.setYRot(yaw);
 						paragliderRoll = paragliderRoll + (targetRoll - paragliderRoll) * 0.2f;
 
+						// Brake-line / hand / wing-tip visuals: drive from actual steering keys
+						// (A/D and spiral double-taps), not from camera look alone.
+						float targetLeftBrake = 0.0f;
+						float targetRightBrake = 0.0f;
+						if (spiralLeft) {
+							targetLeftBrake = 1.0f;
+						} else if (keyLeft) {
+							targetLeftBrake = 0.62f;
+						}
+						if (spiralRight) {
+							targetRightBrake = 1.0f;
+						} else if (keyRight) {
+							targetRightBrake = 0.62f;
+						}
+						paragliderLeftBrake = paragliderLeftBrake + (targetLeftBrake - paragliderLeftBrake) * 0.2f;
+						paragliderRightBrake = paragliderRightBrake + (targetRightBrake - paragliderRightBrake) * 0.2f;
+
 						if (flightMode == ParagliderFlightMode.DOUBLE_W_SPIRAL
 							|| flightMode == ParagliderFlightMode.DOUBLE_W) {
 							targetPitch = 35.0f;
@@ -363,6 +416,8 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					} else {
 						paragliderRoll = 0.0f;
 						paragliderPitch = 0.0f;
+						paragliderLeftBrake = 0.0f;
+						paragliderRightBrake = 0.0f;
 						isDoubleWTapped = false;
 						isFlareLocked = false;
 						lastSentParagliderMode = null;
@@ -370,6 +425,8 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 				} else {
 					paragliderRoll = 0.0f;
 					paragliderPitch = 0.0f;
+					paragliderLeftBrake = 0.0f;
+					paragliderRightBrake = 0.0f;
 					isDoubleWTapped = false;
 					isFlareLocked = false;
 					lastSentParagliderMode = null;
@@ -452,8 +509,12 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 			} else {
 				previousParagliderRoll = 0.0f;
 				previousParagliderPitch = 0.0f;
+				previousParagliderLeftBrake = 0.0f;
+				previousParagliderRightBrake = 0.0f;
 				paragliderRoll = 0.0f;
 				paragliderPitch = 0.0f;
+				paragliderLeftBrake = 0.0f;
+				paragliderRightBrake = 0.0f;
 				lastSentParagliderMode = null;
 			}
 		});

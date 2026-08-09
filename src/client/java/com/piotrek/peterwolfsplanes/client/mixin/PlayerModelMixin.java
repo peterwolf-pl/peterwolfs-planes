@@ -13,6 +13,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PlayerModelMixin {
 	private static final float DEG_TO_RAD = (float) (Math.PI / 180.0);
 
+	/** Arms raised to the brake handles in the neutral harness pose. */
+	private static final float NEUTRAL_ARM_X_DEG = -160.0f;
+	/** How far a full brake lowers the hand (degrees of xRot toward horizontal). */
+	private static final float BRAKE_LOWER_DEG = 38.0f;
+	private static final float NEUTRAL_ARM_Z_DEG = 22.0f;
+
 	@Inject(
 		method = "setupAnim(Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;)V",
 		at = @At("TAIL")
@@ -37,13 +43,17 @@ public abstract class PlayerModelMixin {
 		model.body.xRot = pitchRadians;
 		model.head.xRot += pitchRadians;
 
-		// Arms raised above the shoulders and spread into a Y shape.
-		model.leftArm.xRot = -160.0f * DEG_TO_RAD;
+		float leftBrake = PeterwolfsPlanesClient.getParagliderLeftBrakeForEntity(state.id, partialTick);
+		float rightBrake = PeterwolfsPlanesClient.getParagliderRightBrakeForEntity(state.id, partialTick);
+
+		// Arms at the brake handles; the active steering hand lowers smoothly
+		// and proportionally to the A/D (or spiral) brake input.
+		model.leftArm.xRot = (NEUTRAL_ARM_X_DEG + leftBrake * BRAKE_LOWER_DEG) * DEG_TO_RAD;
 		model.leftArm.yRot = 0.0f;
-		model.leftArm.zRot = 22.0f * DEG_TO_RAD;
-		model.rightArm.xRot = -160.0f * DEG_TO_RAD;
+		model.leftArm.zRot = (NEUTRAL_ARM_Z_DEG - leftBrake * 6.0f) * DEG_TO_RAD;
+		model.rightArm.xRot = (NEUTRAL_ARM_X_DEG + rightBrake * BRAKE_LOWER_DEG) * DEG_TO_RAD;
 		model.rightArm.yRot = 0.0f;
-		model.rightArm.zRot = -22.0f * DEG_TO_RAD;
+		model.rightArm.zRot = (-NEUTRAL_ARM_Z_DEG + rightBrake * 6.0f) * DEG_TO_RAD;
 
 		// Vanilla's seated passenger angles, used here without making the
 		// player a passenger: legs are pulled forward and slightly apart.
