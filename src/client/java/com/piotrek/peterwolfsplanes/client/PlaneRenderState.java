@@ -9,4 +9,5 @@ public class PlaneRenderState extends EntityRenderState {
 	public float propellerAngle;
 	public float speed;
 	public float altitude;
+	public boolean restingOnSolidGround;
 }

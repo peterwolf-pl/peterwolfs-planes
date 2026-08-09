@@ -46,6 +46,10 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 		return this.isOnWater(waterSurfaceY);
 	}
 
+	public boolean isRestingOnWater() {
+		return this.isOnWater();
+	}
+
 	private boolean isOnWater(double waterSurfaceY) {
 		return !Double.isNaN(waterSurfaceY)
 			&& this.getY() <= waterSurfaceY + 0.1D
