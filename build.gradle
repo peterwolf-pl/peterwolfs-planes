@@ -26,6 +26,23 @@ loom {
 
 }
 
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "peterwolfs_planes_gametest"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+		clearRunDirectory = true
+		username = "PWPlaneTest"
+	}
+}
+
+sourceSets.gametest {
+	compileClasspath += sourceSets.client.output
+	runtimeClasspath += sourceSets.client.output
+}
+
 dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -88,4 +105,3 @@ publishing {
 		// retrieving dependencies.
 	}
 }
-

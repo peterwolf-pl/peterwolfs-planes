@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "peterwolfs_planes_gametest",
+	"version": "1.0.0",
+	"name": "Peter Wolf's Planes Client Game Tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": [
+			"com.piotrek.peterwolfsplanes.client.gametest.ParagliderVisualClientGameTest",
+			"com.piotrek.peterwolfsplanes.client.gametest.WaterPlaneClientGameTest"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"fabric-api": "*",
+		"peterwolfs_planes": "*"
+	}
+}

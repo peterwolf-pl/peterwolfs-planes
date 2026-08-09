@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.1.14
+
+- Rebuild the water plane as a single high-wing floatplane with short fuselage-mounted wing supports.
+- Complete the opaque water-plane entity atlas so the fuselage, floats, and enlarged UV faces no longer render with transparent gaps.
+- Keep the parked water plane level on its two full-length floats instead of applying the conventional tail-low two-wheel ground pose.
+- Stop treating water contact as locked ground handling, restoring mouse-driven elevator and aileron authority while the floatplane accelerates and lifts off the water.
+- Add deterministic ClientGameTest coverage for the parked high-wing silhouette and real mouse-driven pitch/roll response.
+- Treat the water surface as float support while retaining live mouse controls, preventing stall pitch from tipping the aircraft onto its nose after landing and braking.
+- Cut a full-chord cockpit opening into the high wing so its center section no longer blocks the first-person pilot view.
+- Scale floatplane aileron authority with water speed so mouse input cannot roll a stationary aircraft, while control returns progressively during the takeoff run.
+
+## 1.1.13
+
+- Shorten the rear suspension lines, especially the outer pair, so they terminate at the wing underside instead of passing nearly through the full aerofoil thickness.
+- Move dynamic brake-branch endpoints just below and slightly inside the trailing edge to keep them connected without penetrating the canopy.
+
+## 1.1.12
+
+- Increase the normal steering visual range so the active hand makes a clearly readable lateral sweep from the rear camera.
+- Strengthen the active wing-tip and trailing-edge down/back deformation while concentrating most of the bend in the outer tip section.
+
+## 1.1.11
+
+- Change paraglider steering-hand travel from a forward/back arm swing to a mirrored lateral sweep, making brake input clearly visible from the rear camera while preserving smooth input interpolation and line-to-hand tracking.
+
+## 1.1.10
+
+- Correct anatomical paraglider side mapping so each brake line connects its wing side to the matching hand and A/D deforms the matching wing tip.
+- Smooth the actual steering-input-driven hand pull and release, tighten the active brake line, and add a subtle connected relaxation curve to the opposite line.
+- Make outer wing tips inherit the reduced mid-wing bend so deformation grows toward the tip without splitting the wing or rotating an entire half as one rigid panel.
+- Add deterministic Fabric ClientGameTest coverage with neutral, left-turn, released, and right-turn screenshots.
+
+## 1.1.9
+
+- Fix paraglider brake lines pointing in opposite front/back directions by using a stable mirrored line orientation.
+- Attach all brake-line branches to the transformed lower trailing edge of the actual outer wing sections, including steering deformation.
+
 ## 1.1.8
 
 - Paraglider: all lines thinner — suspension ~0.28 and brake lines ~0.36 (main riser slightly thicker than branches).

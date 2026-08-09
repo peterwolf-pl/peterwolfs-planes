@@ -43,6 +43,10 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 	private static float previousParagliderPitch = 0.0f;
 	private static float previousParagliderLeftBrake = 0.0f;
 	private static float previousParagliderRightBrake = 0.0f;
+	private static final float NORMAL_BRAKE_PULL = 0.78f;
+	private static final float SPIRAL_BRAKE_PULL = 1.0f;
+	private static final float BRAKE_PULL_SMOOTHING = 0.22f;
+	private static final float BRAKE_RELEASE_SMOOTHING = 0.14f;
 	private static int wTapTimer = 0;
 	private static boolean wasWDown = false;
 	private static boolean isDoubleWTapped = false;
@@ -365,20 +369,26 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 
 						// Brake-line / hand / wing-tip visuals: drive from actual steering keys
 						// (A/D and spiral double-taps), not from camera look alone.
-						float targetLeftBrake = 0.0f;
-						float targetRightBrake = 0.0f;
+						float targetLeftBrake;
+						float targetRightBrake;
 						if (spiralLeft) {
-							targetLeftBrake = 1.0f;
+							targetLeftBrake = SPIRAL_BRAKE_PULL;
+							targetRightBrake = 0.0f;
+						} else if (spiralRight) {
+							targetLeftBrake = 0.0f;
+							targetRightBrake = SPIRAL_BRAKE_PULL;
 						} else if (keyLeft) {
-							targetLeftBrake = 0.62f;
-						}
-						if (spiralRight) {
-							targetRightBrake = 1.0f;
+							targetLeftBrake = NORMAL_BRAKE_PULL;
+							targetRightBrake = 0.0f;
 						} else if (keyRight) {
-							targetRightBrake = 0.62f;
+							targetLeftBrake = 0.0f;
+							targetRightBrake = NORMAL_BRAKE_PULL;
+						} else {
+							targetLeftBrake = 0.0f;
+							targetRightBrake = 0.0f;
 						}
-						paragliderLeftBrake = paragliderLeftBrake + (targetLeftBrake - paragliderLeftBrake) * 0.2f;
-						paragliderRightBrake = paragliderRightBrake + (targetRightBrake - paragliderRightBrake) * 0.2f;
+						paragliderLeftBrake = approachBrake(paragliderLeftBrake, targetLeftBrake);
+						paragliderRightBrake = approachBrake(paragliderRightBrake, targetRightBrake);
 
 						if (flightMode == ParagliderFlightMode.DOUBLE_W_SPIRAL
 							|| flightMode == ParagliderFlightMode.DOUBLE_W) {
@@ -692,5 +702,11 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 				}
 			}
 		);
+	}
+
+	private static float approachBrake(float current, float target) {
+		float smoothing = target > current ? BRAKE_PULL_SMOOTHING : BRAKE_RELEASE_SMOOTHING;
+		float next = current + (target - current) * smoothing;
+		return Math.abs(next - target) < 0.001f ? target : next;
 	}
 }

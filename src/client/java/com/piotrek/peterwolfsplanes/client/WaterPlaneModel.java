@@ -37,45 +37,41 @@ public class WaterPlaneModel extends PlaneModel {
 			PartPose.offset(0.0F, 14.0F, 0.0F)
 		);
 
-		// Lower wing
-		body.addOrReplaceChild("lower_wing",
-			CubeListBuilder.create()
-				.texOffs(0, 68)
-				.addBox(-47.0F, 6.0F, -6.0F, 94.0F, 2.0F, 12.0F),
-			PartPose.ZERO
-		);
-
-		// Upper wing
+		// Single high-mounted wing split around a full-chord cockpit cutout. The
+		// roots remain carried by the four cabane supports while the opening above
+		// the pilot clears the complete first-person line of sight.
 		body.addOrReplaceChild("upper_wing",
 			CubeListBuilder.create()
 				.texOffs(0, 84)
-				.addBox(-54.0F, -20.0F, -6.0F, 108.0F, 2.0F, 12.0F),
+				.addBox(-54.0F, -10.0F, -6.0F, 47.0F, 2.0F, 12.0F)
+				.texOffs(0, 84)
+				.addBox(7.0F, -10.0F, -6.0F, 47.0F, 2.0F, 12.0F),
 			PartPose.ZERO
 		);
 
-		// Wing supports
+		// Short cabane supports between the fuselage and the high wing.
 		body.addOrReplaceChild("left_support_1",
 			CubeListBuilder.create()
 				.texOffs(224, 48)
-				.addBox(-36.4F, -18.0F, -4.0F, 1.0F, 24.0F, 1.0F),
+				.addBox(-6.5F, -8.0F, -4.0F, 1.5F, 6.0F, 1.0F),
 			PartPose.ZERO
 		);
 		body.addOrReplaceChild("left_support_2",
 			CubeListBuilder.create()
 				.texOffs(224, 48)
-				.addBox(-36.4F, -18.0F, 4.0F, 1.0F, 24.0F, 1.0F),
+				.addBox(-6.5F, -8.0F, 3.0F, 1.5F, 6.0F, 1.0F),
 			PartPose.ZERO
 		);
 		body.addOrReplaceChild("right_support_1",
 			CubeListBuilder.create()
 				.texOffs(228, 48)
-				.addBox(35.1F, -18.0F, -4.0F, 1.0F, 24.0F, 1.0F),
+				.addBox(5.0F, -8.0F, -4.0F, 1.5F, 6.0F, 1.0F),
 			PartPose.ZERO
 		);
 		body.addOrReplaceChild("right_support_2",
 			CubeListBuilder.create()
 				.texOffs(228, 48)
-				.addBox(35.1F, -18.0F, 4.0F, 1.0F, 24.0F, 1.0F),
+				.addBox(5.0F, -8.0F, 3.0F, 1.5F, 6.0F, 1.0F),
 			PartPose.ZERO
 		);
 

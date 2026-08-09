@@ -16,34 +16,43 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 	private static final float DEG_TO_RAD = (float) (Math.PI / 180.0);
 	/** Base height of each unit brake-line cube (pixel units). */
 	private static final float BRAKE_LINE_BASE_LEN = 16.0f;
-	/** Max tip rotation from full brake (subtle 8–15° band). */
-	private static final float MAX_TIP_BEND_DEG = 12.0f;
-	/** Max trailing-edge Z push (~7.5% of 16-unit chord). */
-	private static final float MAX_TE_BACK = 1.2f;
+	/** Max tip rotation from full brake; normal steering reaches about 19°. */
+	private static final float MAX_TIP_BEND_DEG = 24.0f;
+	/** Max trailing-edge Z push (~15% of the 16-unit chord). */
+	private static final float MAX_TE_BACK = 2.4f;
 	/** Max trailing-edge Y droop in pixel units. */
-	private static final float MAX_TE_DOWN = 1.0f;
+	private static final float MAX_TE_DOWN = 2.0f;
+	/** Points just below the lower trailing edge, outside the wing volume. */
+	private static final float BRAKE_ATTACH_LOCAL_Y = 1.75f;
+	private static final float BRAKE_ATTACH_LOCAL_Z = 7.55f;
+	private static final float[] LEFT_BRAKE_ATTACH_X = {8.5f, 5.0f, 1.5f};
+	private static final float[] RIGHT_BRAKE_ATTACH_X = {-8.5f, -5.0f, -1.5f};
 
 	private final ModelPart backpack;
 	private final ModelPart canopy;
 	private final ModelPart wingCenter;
-	private final ModelPart wingMidLeft;
-	private final ModelPart wingFarLeft;
-	private final ModelPart wingMidRight;
-	private final ModelPart wingFarRight;
+	/** Anatomical sides: Minecraft player-left is model-space +X. */
+	private final ModelPart leftWingMid;
+	private final ModelPart leftWingTip;
+	private final ModelPart rightWingMid;
+	private final ModelPart rightWingTip;
 
 	/** Main riser + 3 trailing-edge branches per side. */
 	private final ModelPart[] leftBrakeLines;
 	private final ModelPart[] rightBrakeLines;
+	private final float[][] leftBrakeAttachments = new float[3][3];
+	private final float[][] rightBrakeAttachments = new float[3][3];
+	private final Vector3f attachmentScratch = new Vector3f();
 
 	public ParagliderModel(ModelPart root) {
 		super(root);
 		this.backpack = root.getChild("backpack");
 		this.canopy = root.getChild("canopy");
 		this.wingCenter = this.canopy.getChild("wing_center");
-		this.wingMidLeft = this.canopy.getChild("wing_mid_left");
-		this.wingFarLeft = this.canopy.getChild("wing_far_left");
-		this.wingMidRight = this.canopy.getChild("wing_mid_right");
-		this.wingFarRight = this.canopy.getChild("wing_far_right");
+		this.leftWingMid = this.canopy.getChild("wing_mid_right");
+		this.leftWingTip = this.leftWingMid.getChild("wing_far_right");
+		this.rightWingMid = this.canopy.getChild("wing_mid_left");
+		this.rightWingTip = this.rightWingMid.getChild("wing_far_left");
 
 		ModelPart brakes = root.getChild("brake_lines");
 		this.leftBrakeLines = new ModelPart[] {
@@ -82,36 +91,37 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 	 */
 	public void applyWingDeformation(float leftBrake, float rightBrake) {
 		this.wingCenter.resetPose();
-		this.wingMidLeft.resetPose();
-		this.wingFarLeft.resetPose();
-		this.wingMidRight.resetPose();
-		this.wingFarRight.resetPose();
+		this.leftWingMid.resetPose();
+		this.leftWingTip.resetPose();
+		this.rightWingMid.resetPose();
+		this.rightWingTip.resetPose();
 
-		deformSide(this.wingFarLeft, this.wingMidLeft, leftBrake, true);
-		deformSide(this.wingFarRight, this.wingMidRight, rightBrake, false);
+		deformSide(this.leftWingTip, this.leftWingMid, leftBrake, 1.0f);
+		deformSide(this.rightWingTip, this.rightWingMid, rightBrake, -1.0f);
 	}
 
-	private static void deformSide(ModelPart tip, ModelPart mid, float brake, boolean left) {
+	private static void deformSide(ModelPart tip, ModelPart mid, float brake, float modelXSign) {
 		if (brake <= 0.001f) {
 			return;
 		}
 		float amount = Mth.clamp(brake, 0.0f, 1.0f);
 		// Negative xRot drops the trailing edge (+Z) downward (+Y in model space).
 		float tipBend = -amount * MAX_TIP_BEND_DEG * DEG_TO_RAD;
-		float midBend = tipBend * 0.4f;
-		float sideSign = left ? -1.0f : 1.0f;
-		// Extra tip droop without changing overall span.
-		float tipExtraZ = sideSign * amount * 3.0f * DEG_TO_RAD;
+		float midBend = tipBend * 0.3f;
+		float tipExtraZ = modelXSign * amount * 6.0f * DEG_TO_RAD;
 
-		tip.xRot += tipBend;
-		tip.zRot += tipExtraZ;
-		tip.y += amount * MAX_TE_DOWN;
-		tip.z += amount * MAX_TE_BACK;
-
+		// The tip is a child of the mid section. Split the bend between both
+		// joints so deformation increases toward the tip while their seam stays
+		// connected instead of rotating the whole half-wing as a rigid panel.
 		mid.xRot += midBend;
-		mid.zRot += tipExtraZ * 0.35f;
-		mid.y += amount * MAX_TE_DOWN * 0.4f;
-		mid.z += amount * MAX_TE_BACK * 0.4f;
+		mid.zRot += tipExtraZ * 0.25f;
+		mid.y += amount * MAX_TE_DOWN * 0.3f;
+		mid.z += amount * MAX_TE_BACK * 0.3f;
+
+		tip.xRot += tipBend - midBend;
+		tip.zRot += tipExtraZ * 0.75f;
+		tip.y += amount * MAX_TE_DOWN * 0.7f;
+		tip.z += amount * MAX_TE_BACK * 0.7f;
 	}
 
 	/**
@@ -133,28 +143,16 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 			return;
 		}
 
-		// Trailing-edge attachments near each wing tip (pixel units, body space).
-		// Slightly track the same tip deformation so lines stay attached.
-		float leftTeY = -38.5f + leftBrake * MAX_TE_DOWN;
-		float leftTeZ = 7.0f + leftBrake * MAX_TE_BACK;
-		float rightTeY = -38.5f + rightBrake * MAX_TE_DOWN;
-		float rightTeZ = 7.0f + rightBrake * MAX_TE_BACK;
-
-		float[][] leftTips = {
-			{-30.5f, leftTeY, leftTeZ},
-			{-27.0f, leftTeY + 0.2f, leftTeZ},
-			{-23.5f, leftTeY, leftTeZ - 0.2f}
-		};
-		float[][] rightTips = {
-			{30.5f, rightTeY, rightTeZ},
-			{27.0f, rightTeY + 0.2f, rightTeZ},
-			{23.5f, rightTeY, rightTeZ - 0.2f}
-		};
+		// Derive the attachment points from the actual transformed wing sections.
+		// This keeps every branch on the lower trailing edge as the tip bends,
+		// instead of approximating the rotated wing with body-space constants.
+		updateBrakeAttachments(this.leftWingMid, this.leftWingTip, LEFT_BRAKE_ATTACH_X, this.leftBrakeAttachments);
+		updateBrakeAttachments(this.rightWingMid, this.rightWingTip, RIGHT_BRAKE_ATTACH_X, this.rightBrakeAttachments);
 
 		placeBrakeSide(
 			this.leftBrakeLines,
 			handLeftX, handLeftY, handLeftZ,
-			leftTips,
+			this.leftBrakeAttachments,
 			leftBrake,
 			// Opposite slack when the other side is pulled harder.
 			Math.max(0.0f, rightBrake - leftBrake) * 0.35f
@@ -162,10 +160,28 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 		placeBrakeSide(
 			this.rightBrakeLines,
 			handRightX, handRightY, handRightZ,
-			rightTips,
+			this.rightBrakeAttachments,
 			rightBrake,
 			Math.max(0.0f, leftBrake - rightBrake) * 0.35f
 		);
+	}
+
+	private void updateBrakeAttachments(ModelPart wingMid, ModelPart wingTip, float[] localX, float[][] attachments) {
+		for (int i = 0; i < localX.length; i++) {
+			transformPartPoint(
+				wingTip,
+				localX[i], BRAKE_ATTACH_LOCAL_Y, BRAKE_ATTACH_LOCAL_Z,
+				this.attachmentScratch
+			);
+			transformPartPoint(
+				wingMid,
+				this.attachmentScratch.x, this.attachmentScratch.y, this.attachmentScratch.z,
+				this.attachmentScratch
+			);
+			attachments[i][0] = this.attachmentScratch.x;
+			attachments[i][1] = this.attachmentScratch.y;
+			attachments[i][2] = this.attachmentScratch.z;
+		}
 	}
 
 	private static void placeBrakeSide(
@@ -185,7 +201,10 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 		float splitZ = Mth.lerp(0.72f, handZ, meanTipZ);
 
 		// Subtle curve only when relaxed (no expensive rope sim).
-		float slack = (1.0f - Mth.clamp(tension, 0.0f, 1.0f)) * 0.85f + extraSlack;
+		// A normal 0.62 brake pull is already taut; the neutral/opposite side
+		// retains only a small one-kink curve. This is visual, not rope physics.
+		float tautness = Mth.clamp(tension * 1.6f, 0.0f, 1.0f);
+		float slack = (1.0f - tautness) * 0.55f + extraSlack;
 		if (slack > 0.001f) {
 			// Sag slightly outward and a touch back so the idle line is not perfectly rigid.
 			float outward = Math.signum(meanTipX == 0.0f ? 1.0f : meanTipX);
@@ -232,23 +251,14 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 		part.zScale = thicknessScale;
 		part.yScale = len / BRAKE_LINE_BASE_LEN;
 
-		// Align local -Y with (dx,dy,dz). rotationZYX: Z then Y then X.
-		// First yaw around Y so the line's XZ matches, then pitch around X.
-		// For a default -Y axis: use zRot / xRot pair that maps -Y → direction.
-		float invLen = 1.0f / len;
-		float dirX = dx * invLen;
-		float dirY = dy * invLen;
-		float dirZ = dz * invLen;
-
-		// Build a rotation that takes (0, -1, 0) to (dirX, dirY, dirZ).
-		Vector3f from = new Vector3f(0.0f, -1.0f, 0.0f);
-		Vector3f to = new Vector3f(dirX, dirY, dirZ);
-		Quaternionf q = new Quaternionf().rotationTo(from, to);
-		Vector3f euler = new Vector3f();
-		q.getEulerAnglesZYX(euler);
-		part.zRot = euler.x;
-		part.yRot = euler.y;
-		part.xRot = euler.z;
+		// ModelPart applies rotationZYX(zRot, yRot, xRot). With yRot held at
+		// zero these two angles map local -Y exactly onto the requested vector,
+		// without the ambiguous quaternion-to-Euler conversion that could flip
+		// one mirrored line toward the front and the other toward the back.
+		float horizontal = Mth.sqrt(dx * dx + dy * dy);
+		part.xRot = (float) Math.atan2(-dz, horizontal);
+		part.yRot = 0.0f;
+		part.zRot = (float) Math.atan2(dx, -dy);
 	}
 
 	private static void setBrakeVisible(ModelPart[] lines, boolean visible) {
@@ -262,9 +272,14 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 	 * (same units as part.x / cube coords).
 	 */
 	public static void transformArmPoint(ModelPart arm, float lx, float ly, float lz, Vector3f out) {
-		out.set(lx * arm.xScale, ly * arm.yScale, lz * arm.zScale);
-		new Quaternionf().rotationZYX(arm.zRot, arm.yRot, arm.xRot).transform(out);
-		out.add(arm.x, arm.y, arm.z);
+		transformPartPoint(arm, lx, ly, lz, out);
+	}
+
+	/** Transforms a part-local point into its parent coordinate space. */
+	private static void transformPartPoint(ModelPart part, float lx, float ly, float lz, Vector3f out) {
+		out.set(lx * part.xScale, ly * part.yScale, lz * part.zScale);
+		new Quaternionf().rotationZYX(part.zRot, part.yRot, part.xRot).transform(out);
+		out.add(part.x, part.y, part.z);
 	}
 
 	/**
@@ -322,65 +337,68 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 			PartPose.ZERO
 		);
 		// Mid-left section (curved slightly down)
-		canopyPart.addOrReplaceChild("wing_mid_left",
+		PartDefinition midLeftPart = canopyPart.addOrReplaceChild("wing_mid_left",
 			CubeListBuilder.create()
 				.texOffs(64, 16)
 				.addBox(-12.0F, -1.5F, -8.0F, 12.0F, 3.0F, 16.0F),
 			PartPose.offsetAndRotation(-10.0F, -40.5F, 0.0F, 0.0F, 0.0F, -0.087F)
 		);
-		// Far-left wingtip
-		canopyPart.addOrReplaceChild("wing_far_left",
+		// Far-left model-space wingtip. It is nested under the mid section so
+		// steering deformation remains connected at the section seam.
+		midLeftPart.addOrReplaceChild("wing_far_left",
 			CubeListBuilder.create()
 				.texOffs(120, 16)
 				.addBox(-10.0F, -1.5F, -8.0F, 10.0F, 3.0F, 16.0F),
-			PartPose.offsetAndRotation(-22.0F, -39.5F, 0.0F, 0.0F, 0.0F, -0.209F)
+			PartPose.offsetAndRotation(-12.041F, -0.047F, 0.0F, 0.0F, 0.0F, -0.122F)
 		);
 		// Mid-right section
-		canopyPart.addOrReplaceChild("wing_mid_right",
+		PartDefinition midRightPart = canopyPart.addOrReplaceChild("wing_mid_right",
 			CubeListBuilder.create()
 				.texOffs(64, 48)
 				.addBox(0.0F, -1.5F, -8.0F, 12.0F, 3.0F, 16.0F),
 			PartPose.offsetAndRotation(10.0F, -40.5F, 0.0F, 0.0F, 0.0F, 0.087F)
 		);
-		// Far-right wingtip
-		canopyPart.addOrReplaceChild("wing_far_right",
+		// Far-right model-space wingtip, nested for the same connected bend.
+		midRightPart.addOrReplaceChild("wing_far_right",
 			CubeListBuilder.create()
 				.texOffs(120, 48)
 				.addBox(0.0F, -1.5F, -8.0F, 10.0F, 3.0F, 16.0F),
-			PartPose.offsetAndRotation(22.0F, -39.5F, 0.0F, 0.0F, 0.0F, 0.209F)
+			PartPose.offsetAndRotation(12.041F, -0.047F, 0.0F, 0.0F, 0.0F, 0.122F)
 		);
 
 		// 4 thin suspension lines from backpack up to the canopy.
 		// ~0.28 thick so they read as lines, not beams.
 		final float suspHalf = 0.14F;
 		final float suspSize = 0.28F;
+		final float suspFarLength = 46.75F;
+		final float suspMidLength = 42.35F;
 		// Line 1: Far Left (connects to x = -27)
 		canopyPart.addOrReplaceChild("line_far_left",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-suspHalf, -50.1F, -suspHalf, suspSize, 50.1F, suspSize),
-			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, 0.571F)
+				.addBox(-suspHalf, -suspFarLength, -suspHalf, suspSize, suspFarLength, suspSize),
+			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.082F, 0.0F, 0.571F)
 		);
 		// Line 2: Mid Left (connects to x = -11)
 		canopyPart.addOrReplaceChild("line_mid_left",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-suspHalf, -43.6F, -suspHalf, suspSize, 43.6F, suspSize),
+				.addBox(-suspHalf, -suspMidLength, -suspHalf, suspSize, suspMidLength, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, 0.256F)
 		);
 		// Line 3: Mid Right (connects to x = +11)
 		canopyPart.addOrReplaceChild("line_mid_right",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-suspHalf, -43.6F, -suspHalf, suspSize, 43.6F, suspSize),
+				.addBox(-suspHalf, -suspMidLength, -suspHalf, suspSize, suspMidLength, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, -0.256F)
 		);
 		// Line 4: Far Right (connects to x = +27)
 		canopyPart.addOrReplaceChild("line_far_right",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-suspHalf, -50.1F, -suspHalf, suspSize, 50.1F, suspSize),
-			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, -0.571F)
+				.addBox(-suspHalf, -suspFarLength, -suspHalf, suspSize, suspFarLength, suspSize),
+			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.082F, 0.0F, -0.571F)
 		);
 
 		// Brake lines: unit-length cubes along -Y; transformed each frame from hands

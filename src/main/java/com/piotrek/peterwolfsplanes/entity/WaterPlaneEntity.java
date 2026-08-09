@@ -20,8 +20,17 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 
 	public double getWaterSurfaceY() {
 		BlockPos pos = this.blockPosition();
-		// Scan upwards to find the highest water block
-		while (this.level().getFluidState(pos.above()).isSource() || this.level().getFluidState(pos.above()).is(net.minecraft.tags.FluidTags.WATER)) {
+		// At the exact surface the entity's block position is already air. Scan
+		// down through the float depth first, then find the top water block.
+		int scanDepth = 0;
+		while (!this.level().getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER) && scanDepth < 3) {
+			pos = pos.below();
+			scanDepth++;
+		}
+		if (!this.level().getFluidState(pos).is(net.minecraft.tags.FluidTags.WATER)) {
+			return Double.NaN;
+		}
+		while (this.level().getFluidState(pos.above()).is(net.minecraft.tags.FluidTags.WATER)) {
 			pos = pos.above();
 		}
 		FluidState state = this.level().getFluidState(pos);
@@ -34,15 +43,25 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 
 	private boolean isOnWater() {
 		double waterSurfaceY = this.getWaterSurfaceY();
-		if (Double.isNaN(waterSurfaceY)) {
-			return false;
-		}
-		return this.getY() <= waterSurfaceY + 0.1D;
+		return this.isOnWater(waterSurfaceY);
+	}
+
+	private boolean isOnWater(double waterSurfaceY) {
+		return !Double.isNaN(waterSurfaceY)
+			&& this.getY() <= waterSurfaceY + 0.1D
+			&& this.getY() >= waterSurfaceY - 1.5D;
 	}
 
 	@Override
-	public boolean onGround() {
-		return super.onGround() || this.isOnWater();
+	protected boolean hasSurfaceSupport() {
+		return this.isOnWater();
+	}
+
+	@Override
+	protected float getEmptyGroundVisualPitch() {
+		// Two long floats support the airframe along its length, so it parks
+		// level instead of resting tail-low like two-wheel landing gear.
+		return 0.0F;
 	}
 
 	@Override
@@ -50,7 +69,7 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 		super.tick();
 
 		double waterSurfaceY = this.getWaterSurfaceY();
-		if (!Double.isNaN(waterSurfaceY)) {
+		if (this.isOnWater(waterSurfaceY)) {
 			if (this.getY() < waterSurfaceY) {
 				this.setPos(this.getX(), waterSurfaceY, this.getZ());
 				Vec3 vel = this.getDeltaMovement();

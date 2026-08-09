@@ -887,9 +887,14 @@ public class PlaneEntity extends Entity {
 	private void tickPilotedPhysics(@Nullable Player pilot, float currentThrottle, float aiRelativeYaw, float aiRelativePitch) {
 		Vec3 currentVelocity = this.getDeltaMovement();
 		boolean grounded = this.resolveGroundHandling(this.onGround(), currentThrottle, currentVelocity);
+		// Floats can support an aircraft without turning it into a ground-locked
+		// vehicle. Keep mouse flight controls active, but do not apply airborne
+		// stall/sink forces while the airframe is resting on that surface.
+		boolean surfaceSupported = grounded || this.hasSurfaceSupport();
 		// NPC takeoff rotation: leave ground handling so pitch-up is not zeroed
 		if (pilot == null && this.aiForceAirborne) {
 			grounded = false;
+			surfaceSupported = false;
 			this.groundContactGraceTicks = 0;
 		}
 
@@ -930,7 +935,12 @@ public class PlaneEntity extends Entity {
 			this.smoothedRelativeYaw += (relativeYaw - this.smoothedRelativeYaw) * INPUT_SMOOTHING;
 			this.smoothedRelativePitch += (relativePitch - this.smoothedRelativePitch) * INPUT_SMOOTHING;
 
-			float targetRoll = Mth.clamp(this.smoothedRelativeYaw * 0.75F + this.getRudder() * 20.0F, -getMaxBank(), getMaxBank());
+			float surfaceRollAuthority = surfaceSupported && !grounded ? controlEfficiency : 1.0F;
+			float targetRoll = Mth.clamp(
+				(this.smoothedRelativeYaw * 0.75F + this.getRudder() * 20.0F) * surfaceRollAuthority,
+				-getMaxBank(),
+				getMaxBank()
+			);
 			float rollStep = 0.7F + 2.6F * controlEfficiency;
 			this.setRoll(Mth.approachDegrees(this.getRoll(), targetRoll, rollStep));
 
@@ -975,13 +985,13 @@ public class PlaneEntity extends Entity {
 		this.setPlaneYaw(this.getYRot() + this.yawRate);
 
 		heading = grounded ? this.calculateGroundHeading(this.getYRot()) : this.calculateHeading(this.getYRot(), this.getXRot());
-		speed = this.applyForces(speed, heading, currentThrottle, grounded);
+		speed = this.applyForces(speed, heading, currentThrottle, surfaceSupported);
 		if (grounded && this.hasGroundIdlePower(currentThrottle) && speed < GROUND_IDLE_HOLD_SPEED) {
 			speed = 0.0D;
 		}
 
 		double sink = 0.0D;
-		if (!grounded) {
+		if (!surfaceSupported) {
 			double liftY = this.calculateLiftY(speed);
 			double liftDeficit = liftY - GRAVITY;
 			if (liftDeficit < 0.0D) {
@@ -1025,14 +1035,14 @@ public class PlaneEntity extends Entity {
 		pilot.xRotO += pitchDelta;
 	}
 
-	private double applyForces(double speed, Vec3 heading, float currentThrottle, boolean grounded) {
+	private double applyForces(double speed, Vec3 heading, float currentThrottle, boolean surfaceSupported) {
 		double mass = Math.max(0.5D, this.getCargoMassFactor());
 		double thrustForce = this.enginePower * getThrustForce() / mass;
 		double gravityAssist = -GRAVITY * heading.y * 0.85D * mass;
 		double dragForce = speed * (getBaseDrag() * mass + Math.min(speed, 1.6D) * getSpeedDrag() * Math.sqrt(mass));
 		speed = Math.max(0.0D, speed + thrustForce + gravityAssist - dragForce);
 
-		if (grounded) {
+		if (surfaceSupported) {
 			double brakeAmount = currentThrottle < 0.0F ? 0.065D * -currentThrottle : 0.0D;
 			double rollingResistance = 0.006D + Math.abs(this.getRudder()) * 0.0015D;
 			speed = Math.max(0.0D, speed - brakeAmount - rollingResistance);
@@ -1082,9 +1092,26 @@ public class PlaneEntity extends Entity {
 			return -10.0F;
 		}
 		if (this.shouldUseEmptyGroundVisualPose()) {
-			return EMPTY_GROUND_VISUAL_PITCH;
+			return this.getEmptyGroundVisualPitch();
 		}
 		return this.getXRot();
+	}
+
+	/**
+	 * Empty parked attitude. Conventional two-wheel aircraft rest tail-low;
+	 * subclasses with level landing gear or floats can override this.
+	 */
+	protected float getEmptyGroundVisualPitch() {
+		return EMPTY_GROUND_VISUAL_PITCH;
+	}
+
+	/**
+	 * Non-solid support such as floats resting on water. It suppresses airborne
+	 * stall/sink behavior and enables braking drag without disabling flight
+	 * controls as the normal grounded state does.
+	 */
+	protected boolean hasSurfaceSupport() {
+		return false;
 	}
 
 	private boolean shouldUseEmptyGroundVisualPose() {
@@ -1095,7 +1122,7 @@ public class PlaneEntity extends Entity {
 
 		Vec3 velocity = this.getDeltaMovement();
 		boolean settled = this.isLowGroundIdleSpeed(velocity);
-		if (this.onGround() && settled) {
+		if ((this.onGround() || this.hasSurfaceSupport()) && settled) {
 			this.emptyGroundPoseTicks = GROUND_CONTACT_GRACE_TICKS;
 			return true;
 		}
@@ -1130,7 +1157,7 @@ public class PlaneEntity extends Entity {
 		// is held, which was previously excluded by the hasGroundIdlePower
 		// check and caused HUD speed to flicker with the residual deltaMovement.
 		return this.getFirstPassenger() instanceof Player
-			&& (this.onGround() || this.groundContactGraceTicks > 0)
+			&& (this.onGround() || this.hasSurfaceSupport() || this.groundContactGraceTicks > 0)
 			&& this.isLowGroundIdleSpeed(velocity);
 	}
 
@@ -1173,7 +1200,7 @@ public class PlaneEntity extends Entity {
 		this.smoothedRelativeYaw = Mth.approach(this.smoothedRelativeYaw, 0.0F, 4.0F);
 		this.smoothedRelativePitch = Mth.approach(this.smoothedRelativePitch, 0.0F, 4.0F);
 
-		if (this.onGround()) {
+		if (this.onGround() || this.hasSurfaceSupport()) {
 			this.groundContactGraceTicks = GROUND_CONTACT_GRACE_TICKS;
 			this.setDeltaMovement(Vec3.ZERO);
 			this.setXRot(Mth.approach(this.getXRot(), 0.0F, 3.0F));
