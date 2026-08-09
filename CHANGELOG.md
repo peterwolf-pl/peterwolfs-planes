@@ -11,6 +11,7 @@
 - Cut a full-chord cockpit opening into the high wing so its center section no longer blocks the first-person pilot view.
 - Scale floatplane aileron authority with water speed so mouse input cannot roll a stationary aircraft, while control returns progressively during the takeoff run.
 - Raise only the solid-ground render baseline by the exact float-bottom offset so the pontoons rest on terrain without changing their water immersion.
+- Allow the Water Plane item to be deployed directly onto a targeted water surface while leaving land placement and other aircraft unchanged.
 
 ## 1.1.13
 

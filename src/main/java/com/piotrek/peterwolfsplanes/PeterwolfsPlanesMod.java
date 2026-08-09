@@ -144,7 +144,7 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 	public static final PlaneItem WATER_PLANE_ITEM = Registry.register(
 		BuiltInRegistries.ITEM,
 		WATER_PLANE_ITEM_KEY,
-		new PlaneItem(new Item.Properties().setId(WATER_PLANE_ITEM_KEY).stacksTo(1), (world) -> new WaterPlaneEntity(WATER_PLANE_ENTITY, world))
+		new PlaneItem(new Item.Properties().setId(WATER_PLANE_ITEM_KEY).stacksTo(1), (world) -> new WaterPlaneEntity(WATER_PLANE_ENTITY, world), true)
 	);
 
 	public static final ResourceKey<Item> MONOPLANE_ITEM_KEY = ResourceKey.create(Registries.ITEM, id("monoplane"));
