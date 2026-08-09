@@ -194,15 +194,15 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 			splitZ += slack * 0.6f;
 		}
 
-		// Main riser: hand → split
-		orientLine(lines[0], handX, handY, handZ, splitX, splitY, splitZ, 1.15f);
+		// Main riser: hand → split (a touch thicker than branches / suspension)
+		orientLine(lines[0], handX, handY, handZ, splitX, splitY, splitZ, 1.05f);
 		// Three thinner branches: split → trailing edge
 		for (int i = 0; i < 3; i++) {
 			orientLine(
 				lines[i + 1],
 				splitX, splitY, splitZ,
 				tips[i][0], tips[i][1], tips[i][2],
-				0.85f
+				0.75f
 			);
 		}
 	}
@@ -350,38 +350,41 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 			PartPose.offsetAndRotation(22.0F, -39.5F, 0.0F, 0.0F, 0.0F, 0.209F)
 		);
 
-		// 4 Suspension lines anchored at Backpack (0, 2, 4) and extending up to Canopy!
+		// 4 thin suspension lines from backpack up to the canopy.
+		// ~0.28 thick so they read as lines, not beams.
+		final float suspHalf = 0.14F;
+		final float suspSize = 0.28F;
 		// Line 1: Far Left (connects to x = -27)
 		canopyPart.addOrReplaceChild("line_far_left",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-0.5F, -50.1F, -0.5F, 1.0F, 50.1F, 1.0F),
+				.addBox(-suspHalf, -50.1F, -suspHalf, suspSize, 50.1F, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, 0.571F)
 		);
 		// Line 2: Mid Left (connects to x = -11)
 		canopyPart.addOrReplaceChild("line_mid_left",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-0.5F, -43.6F, -0.5F, 1.0F, 43.6F, 1.0F),
+				.addBox(-suspHalf, -43.6F, -suspHalf, suspSize, 43.6F, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, 0.256F)
 		);
 		// Line 3: Mid Right (connects to x = +11)
 		canopyPart.addOrReplaceChild("line_mid_right",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-0.5F, -43.6F, -0.5F, 1.0F, 43.6F, 1.0F),
+				.addBox(-suspHalf, -43.6F, -suspHalf, suspSize, 43.6F, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, -0.256F)
 		);
 		// Line 4: Far Right (connects to x = +27)
 		canopyPart.addOrReplaceChild("line_far_right",
 			CubeListBuilder.create()
 				.texOffs(0, 64)
-				.addBox(-0.5F, -50.1F, -0.5F, 1.0F, 50.1F, 1.0F),
+				.addBox(-suspHalf, -50.1F, -suspHalf, suspSize, 50.1F, suspSize),
 			PartPose.offsetAndRotation(0.0F, 2.0F, 4.0F, -0.095F, 0.0F, -0.571F)
 		);
 
 		// Brake lines: unit-length cubes along -Y; transformed each frame from hands
-		// to the trailing edge. Slightly thicker / darker than suspension lines.
+		// to the trailing edge. Slightly thicker than suspension so they stay readable.
 		PartDefinition brakeRoot = rootPart.addOrReplaceChild("brake_lines", CubeListBuilder.create(), PartPose.ZERO);
 		addBrakeLinePart(brakeRoot, "left_main");
 		addBrakeLinePart(brakeRoot, "left_branch_a");
@@ -396,12 +399,13 @@ public class ParagliderModel extends EntityModel<AvatarRenderState> {
 	}
 
 	private static void addBrakeLinePart(PartDefinition parent, String name) {
-		// texOffs(4, 64) — adjacent dark strip on the line row; slightly different U
-		// keeps brake lines readable vs suspension without a new texture.
+		// Thin dark line (~0.36); runtime x/z scale keeps main slightly thicker than branches.
+		final float half = 0.18F;
+		final float size = 0.36F;
 		parent.addOrReplaceChild(name,
 			CubeListBuilder.create()
 				.texOffs(4, 64)
-				.addBox(-0.55F, -BRAKE_LINE_BASE_LEN, -0.55F, 1.1F, BRAKE_LINE_BASE_LEN, 1.1F),
+				.addBox(-half, -BRAKE_LINE_BASE_LEN, -half, size, BRAKE_LINE_BASE_LEN, size),
 			PartPose.ZERO
 		);
 	}

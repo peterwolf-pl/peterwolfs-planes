@@ -2,6 +2,7 @@
 
 ## 1.1.8
 
+- Paraglider: all lines thinner — suspension ~0.28 and brake lines ~0.36 (main riser slightly thicker than branches).
 - Paraglider: **brake lines** from each hand to the trailing edge near the wing tips (main riser + 3 thin branches per side, dark graphite/red, slightly more visible than suspension lines).
 - Paraglider: pilot **hand animation** follows real A/D (and double-tap spiral) steering — active hand lowers smoothly; releases return to the neutral brake-handle pose.
 - Paraglider: turning side **brake line tightens** and tracks the animated hand; the opposite line stays neutral or slightly relaxed with a subtle sag (no rope physics).
