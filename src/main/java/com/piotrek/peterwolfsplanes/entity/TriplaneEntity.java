@@ -12,6 +12,6 @@ public class TriplaneEntity extends PlaneEntity {
 
 	@Override
 	public Item getDropItem() {
-		return PeterwolfsPlanesMod.TRIPLANE_ITEM;
+		return PeterwolfsPlanesMod.TRIPLANE_ITEM.get();
 	}
 }

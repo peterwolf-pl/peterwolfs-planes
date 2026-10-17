@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.16
+
+- Add realistic international aviation warning and navigation lights (ICAO/FAA compliant) to all aircraft:
+  - **Left Wingtip (Port)**: Steady Aviation Red position light + double-flash high-intensity white strobe.
+  - **Right Wingtip (Starboard)**: Steady Aviation Green position light + double-flash high-intensity white strobe.
+  - **Tail / Rudder (Aft)**: Steady Aviation White position light + tail strobe + flashing red anti-collision beacon on the vertical stabilizer.
+- Dedicated emissive lighting rendering layer (`RenderTypes.eyes`) with fullbright illumination and shader bloom compatibility.
+- Prevent villager pilot aircraft from prematurely entering `PARKED` state unless physically touchdown on runway ground surface (stops mid-air freezing on trees/obstacles).
+- Add minimum cruise airspeed and positive forward velocity protection against aerodynamic stalls during NPC patrol and climb phases.
+
+## 1.1.15
+
+- Keep villager-piloted aircraft visually aligned with their synchronized flight heading instead of leaving the rendered fuselage at a stale yaw.
+- Make the villager pilot follow the aircraft seat, pitch, and bank with a stable seated cockpit pose.
+- After a randomized three-to-five-minute patrol, send villager pilots back to the nearest generated runway for an aligned approach, landing roll, braking, and parked stop.
+- Add a dedicated pixel-art inventory texture for the Villager Pilot Spawn Egg.
+
 ## 1.1.14
 
 - Rebuild the water plane as a single high-wing floatplane with short fuselage-mounted wing supports.

@@ -64,9 +64,9 @@ public class SquadronHornItem extends Item {
 				// 60% chance of standard plane, 40% chance of triplane
 				PlaneEntity plane;
 				if (level.getRandom().nextFloat() < 0.6F) {
-					plane = new PlaneEntity(PeterwolfsPlanesMod.PLANE_ENTITY, level);
+					plane = new PlaneEntity(PeterwolfsPlanesMod.PLANE_ENTITY.get(), level);
 				} else {
-					plane = new TriplaneEntity(PeterwolfsPlanesMod.TRIPLANE_ENTITY, level);
+					plane = new TriplaneEntity(PeterwolfsPlanesMod.TRIPLANE_ENTITY.get(), level);
 				}
 
 				plane.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
@@ -77,7 +77,7 @@ public class SquadronHornItem extends Item {
 				level.addFreshEntity(plane);
 
 				// Spawn pilot
-				VillagerPilotEntity pilot = new VillagerPilotEntity(PeterwolfsPlanesMod.VILLAGER_PILOT_ENTITY, level);
+				VillagerPilotEntity pilot = new VillagerPilotEntity(PeterwolfsPlanesMod.VILLAGER_PILOT_ENTITY.get(), level);
 				pilot.setPos(spawnPos.x, spawnPos.y, spawnPos.z);
 				pilot.setYRot(yaw);
 				level.addFreshEntity(pilot);

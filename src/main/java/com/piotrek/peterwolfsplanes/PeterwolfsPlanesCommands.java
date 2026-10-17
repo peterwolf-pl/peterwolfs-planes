@@ -1,16 +1,19 @@
 package com.piotrek.peterwolfsplanes;
 
+import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.BoolArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+
+import com.piotrek.peterwolfsplanes.entity.PlaneEntity;
 
 import java.util.Collection;
 import java.util.List;
@@ -22,9 +25,8 @@ public final class PeterwolfsPlanesCommands {
 	private PeterwolfsPlanesCommands() {
 	}
 
-	public static void register() {
-		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> {
-			dispatcher.register(literal("planes")
+	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
+		dispatcher.register(literal("planes")
 				.then(literal("liftparticles")
 					.executes(PeterwolfsPlanesCommands::toggleLiftParticles)
 					.then(argument("enabled", BoolArgumentType.bool())
@@ -34,9 +36,18 @@ public final class PeterwolfsPlanesCommands {
 					.executes(PeterwolfsPlanesCommands::kitSelf)
 					.then(argument("targets", EntityArgument.players())
 						.executes(PeterwolfsPlanesCommands::kitTargets)))
+				.then(literal("helicopter")
+					.then(literal("altitude")
+						.executes(PeterwolfsPlanesCommands::toggleHelicopterAltitudeMode)
+						.then(literal("simple")
+							.executes(ctx -> setHelicopterAltitudeMode(ctx, true)))
+						.then(literal("realistic")
+							.executes(ctx -> setHelicopterAltitudeMode(ctx, false)))
+						.then(argument("simple", BoolArgumentType.bool())
+							.executes(ctx -> setHelicopterAltitudeMode(ctx, BoolArgumentType.getBool(ctx, "simple"))))))
 			);
 
-			// Short alias
+			// Short aliases
 			dispatcher.register(literal("liftparticles")
 				.executes(PeterwolfsPlanesCommands::toggleLiftParticles)
 				.then(argument("enabled", BoolArgumentType.bool())
@@ -47,7 +58,24 @@ public final class PeterwolfsPlanesCommands {
 				.executes(PeterwolfsPlanesCommands::kitSelf)
 				.then(argument("targets", EntityArgument.players())
 					.executes(PeterwolfsPlanesCommands::kitTargets)));
-		});
+
+			dispatcher.register(literal("helialt")
+				.executes(PeterwolfsPlanesCommands::toggleHelicopterAltitudeMode)
+				.then(literal("simple")
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, true)))
+				.then(literal("realistic")
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, false)))
+				.then(argument("simple", BoolArgumentType.bool())
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, BoolArgumentType.getBool(ctx, "simple")))));
+
+			dispatcher.register(literal("helicontrol")
+				.executes(PeterwolfsPlanesCommands::toggleHelicopterAltitudeMode)
+				.then(literal("simple")
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, true)))
+				.then(literal("realistic")
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, false)))
+				.then(argument("simple", BoolArgumentType.bool())
+					.executes(ctx -> setHelicopterAltitudeMode(ctx, BoolArgumentType.getBool(ctx, "simple")))));
 	}
 
 	private static int toggleLiftParticles(CommandContext<CommandSourceStack> context) {
@@ -89,6 +117,69 @@ public final class PeterwolfsPlanesCommands {
 		return 1;
 	}
 
+	private static int toggleHelicopterAltitudeMode(CommandContext<CommandSourceStack> context) {
+		ServerPlayer player;
+		try {
+			player = context.getSource().getPlayerOrException();
+		} catch (Exception e) {
+			context.getSource().sendFailure(Component.translatable("command.peterwolfs_planes.players_only"));
+			return 0;
+		}
+
+		boolean newMode;
+		if (player.getVehicle() instanceof PlaneEntity plane && plane.isHelicopter()) {
+			newMode = !plane.isSimpleAltitudeControl();
+			plane.setSimpleAltitudeControl(newMode);
+			PlaneEntity.defaultHelicopterSimpleAltitude = newMode;
+			context.getSource().sendSuccess(
+				() -> Component.translatable(newMode
+					? "command.peterwolfs_planes.helicopter_altitude_simple"
+					: "command.peterwolfs_planes.helicopter_altitude_realistic"),
+				false
+			);
+		} else {
+			newMode = !PlaneEntity.defaultHelicopterSimpleAltitude;
+			PlaneEntity.defaultHelicopterSimpleAltitude = newMode;
+			context.getSource().sendSuccess(
+				() -> Component.translatable(newMode
+					? "command.peterwolfs_planes.helicopter_altitude_default_simple"
+					: "command.peterwolfs_planes.helicopter_altitude_default_realistic"),
+				false
+			);
+		}
+		return 1;
+	}
+
+	private static int setHelicopterAltitudeMode(CommandContext<CommandSourceStack> context, boolean simple) {
+		ServerPlayer player;
+		try {
+			player = context.getSource().getPlayerOrException();
+		} catch (Exception e) {
+			context.getSource().sendFailure(Component.translatable("command.peterwolfs_planes.players_only"));
+			return 0;
+		}
+
+		if (player.getVehicle() instanceof PlaneEntity plane && plane.isHelicopter()) {
+			plane.setSimpleAltitudeControl(simple);
+			PlaneEntity.defaultHelicopterSimpleAltitude = simple;
+			context.getSource().sendSuccess(
+				() -> Component.translatable(simple
+					? "command.peterwolfs_planes.helicopter_altitude_simple"
+					: "command.peterwolfs_planes.helicopter_altitude_realistic"),
+				false
+			);
+		} else {
+			PlaneEntity.defaultHelicopterSimpleAltitude = simple;
+			context.getSource().sendSuccess(
+				() -> Component.translatable(simple
+					? "command.peterwolfs_planes.helicopter_altitude_default_simple"
+					: "command.peterwolfs_planes.helicopter_altitude_default_realistic"),
+				false
+			);
+		}
+		return 1;
+	}
+
 	private static int kitSelf(CommandContext<CommandSourceStack> context) throws CommandSyntaxException {
 		ServerPlayer player = context.getSource().getPlayerOrException();
 		giveStarterKit(player);
@@ -115,20 +206,21 @@ public final class PeterwolfsPlanesCommands {
 	/** Every aircraft + paraglider + squadron extras + TNT for bombs. */
 	public static void giveStarterKit(ServerPlayer player) {
 		List<ItemStack> stacks = List.of(
-			new ItemStack(PeterwolfsPlanesMod.PLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.LARGE_PLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.LARGE_TWIN_ENGINE_PLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.TRIPLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.WATER_PLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.MONOPLANE_ITEM),
-			new ItemStack(PeterwolfsPlanesMod.PARAGLIDER_BACKPACK),
-			new ItemStack(PeterwolfsPlanesMod.SQUADRON_HORN),
-			new ItemStack(PeterwolfsPlanesMod.VILLAGER_PILOT_SPAWN_EGG, 2),
+			new ItemStack(PeterwolfsPlanesMod.PLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.LARGE_PLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.LARGE_TWIN_ENGINE_PLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.TRIPLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.WATER_PLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.MONOPLANE_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.HELICOPTER_ITEM.get()),
+			new ItemStack(PeterwolfsPlanesMod.PARAGLIDER_BACKPACK.get()),
+			new ItemStack(PeterwolfsPlanesMod.SQUADRON_HORN.get()),
+			new ItemStack(PeterwolfsPlanesMod.VILLAGER_PILOT_SPAWN_EGG.get(), 2),
 			new ItemStack(Items.TNT, 16)
 		);
 		for (ItemStack stack : stacks) {
 			if (!player.getInventory().add(stack.copy())) {
-				player.drop(stack.copy(), false);
+				player.drop(stack.copy(), false, Prediction.SERVER_ONLY);
 			}
 		}
 		player.sendOverlayMessage(Component.translatable("command.peterwolfs_planes.kit_received"));

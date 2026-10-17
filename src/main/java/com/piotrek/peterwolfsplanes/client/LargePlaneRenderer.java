@@ -1,0 +1,59 @@
+package com.piotrek.peterwolfsplanes.client;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.piotrek.peterwolfsplanes.entity.PlaneEntity;
+import com.piotrek.peterwolfsplanes.PeterwolfsPlanesMod;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
+import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.resources.Identifier;
+
+public class LargePlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderState> {
+	private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/large_plane.png");
+	private static final Identifier LIGHTS_TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/aircraft_lights.png");
+	private final LargePlaneModel model;
+
+	public LargePlaneRenderer(EntityRendererProvider.Context context) {
+		super(context);
+		this.shadowRadius = 1.0F; // Larger shadow
+		this.model = new LargePlaneModel(context.bakeLayer(PeterwolfsPlanesClient.LARGE_PLANE_MODEL_LAYER));
+	}
+
+	@Override
+	public PlaneRenderState createRenderState() {
+		return new PlaneRenderState();
+	}
+
+	@Override
+	public void extractRenderState(PlaneEntity entity, PlaneRenderState state, float partialTick) {
+		super.extractRenderState(entity, state, partialTick);
+		state.pitch = entity.getVisualPitch(partialTick);
+		state.yRot = entity.getRenderYaw(partialTick);
+		state.roll = entity.getRoll(partialTick);
+		state.propellerAngle = entity.getPropellerAngle(partialTick);
+		state.speed = (float) entity.getInstrumentSpeedMetersPerSecond();
+		state.altitude = (float) state.y;
+		state.ageInTicks = entity.tickCount + partialTick;
+		state.extractControlStick(entity, partialTick);
+	}
+
+	@Override
+	public void submit(PlaneRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState cameraState) {
+		super.submit(state, poseStack, collector, cameraState);
+		poseStack.pushPose();
+		poseStack.rotateDegrees(com.mojang.math.Axis.YP, 180.0F - state.yRot);
+		poseStack.scale(-1.0F, -1.0F, 1.0F);
+		poseStack.translate(0.0F, -1.5F, 0.0F);
+		
+		this.model.setupAnim(state);
+		collector.submitModel(this.model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		if (state.lightsOn) {
+			collector.submitModelPart(this.model.getLights(), poseStack, RenderTypes.eyes(LIGHTS_TEXTURE), 15728880, OverlayTexture.NO_OVERLAY, null);
+		}
+		
+		poseStack.popPose();
+	}
+}
