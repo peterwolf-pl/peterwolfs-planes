@@ -38,7 +38,7 @@ public final class ParagliderVisualClientGameTest implements FabricClientGameTes
 			context.waitFor(client -> client.player != null
 				&& client.player.getItemBySlot(EquipmentSlot.CHEST).is(PeterwolfsPlanesMod.PARAGLIDER_BACKPACK)
 				&& PeterwolfsPlanesClient.isParagliderVisuallyDeployed(client.player.getId()), 200);
-			singleplayer.getClientLevel().waitForChunksRender();
+			singleplayer.getConnection().waitForChunksRender();
 
 			context.runOnClient(client -> {
 				client.options.setCameraType(CameraType.THIRD_PERSON_FRONT);

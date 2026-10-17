@@ -12,6 +12,7 @@ Gives every player a **starter kit** with all aircraft and the paraglider.
 | Red Baron's Triplane | `peterwolfs_planes:triplane` |
 | Water Plane | `peterwolfs_planes:water_plane` |
 | Monoplane | `peterwolfs_planes:monoplane` |
+| Helicopter | `peterwolfs_planes:helicopter` |
 | **Paraglider Backpack** | `peterwolfs_planes:paraglider_backpack` |
 | Squadron Horn | `peterwolfs_planes:squadron_horn` |
 | Villager Pilot Spawn Egg ×2 | `peterwolfs_planes:villager_pilot_spawn_egg` |
@@ -19,7 +20,7 @@ Gives every player a **starter kit** with all aircraft and the paraglider.
 
 ## Requirements
 
-- Minecraft **26.2**
+- Minecraft **26.3**
 - Fabric + **Fabric API**
 - **Peter Wolf's Planes** mod (`peterwolfs_planes` ≥ 1.1.0)
 

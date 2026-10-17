@@ -9,15 +9,15 @@ import com.piotrek.peterwolfsplanes.network.ParagliderInputPayload;
 import com.piotrek.peterwolfsplanes.network.PlaneInputPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.fabricmc.fabric.api.client.rendering.v1.ModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.network.chat.Component;
@@ -26,10 +26,11 @@ import net.minecraft.util.Mth;
 
 import com.piotrek.peterwolfsplanes.ParagliderHandler;
 import com.piotrek.peterwolfsplanes.network.ParagliderSyncPayload;
-import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 public class PeterwolfsPlanesClient implements ClientModInitializer {
@@ -88,6 +89,10 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "monoplane"),
 		"main"
 	);
+	public static final ModelLayerLocation HELICOPTER_MODEL_LAYER = new ModelLayerLocation(
+		Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "helicopter"),
+		"main"
+	);
 	public static final ModelLayerLocation PARAGLIDER_MODEL_LAYER = new ModelLayerLocation(
 		Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "paraglider"),
 		"main"
@@ -98,21 +103,21 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 	);
 
 	/** Toggle dogfight combat mode while piloting. Default: V */
-	public static final KeyMapping TOGGLE_COMBAT = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+	public static final KeyMapping TOGGLE_COMBAT = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 		"key.peterwolfs_planes.toggle_combat",
 		InputConstants.Type.KEYSYM,
 		InputConstants.KEY_V,
 		PLANES_CATEGORY
 	));
 	/** Drop a lit TNT bomb while combat mode is armed. Default: B */
-	public static final KeyMapping DROP_BOMB = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+	public static final KeyMapping DROP_BOMB = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 		"key.peterwolfs_planes.drop_bomb",
 		InputConstants.Type.KEYSYM,
 		InputConstants.KEY_B,
 		PLANES_CATEGORY
 	));
 	/** Toggle ridge-lift strength HUD. Default: H */
-	public static final KeyMapping TOGGLE_LIFT_HUD = KeyMappingHelper.registerKeyMapping(new KeyMapping(
+	public static final KeyMapping TOGGLE_LIFT_HUD = KeyBindingHelper.registerKeyBinding(new KeyMapping(
 		"key.peterwolfs_planes.toggle_lift_hud",
 		InputConstants.Type.KEYSYM,
 		InputConstants.KEY_H,
@@ -126,6 +131,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 	private static boolean lastSentFireGuns = false;
 	private static ParagliderFlightMode lastSentParagliderMode;
 	private static boolean combatModeActive = false;
+	private static boolean lastSentHelicopterAirborne = false;
 
 	/** True when the plane uses dogfight V/B combat bindings (default). */
 	private static boolean usesCombatControls(PlaneEntity plane) {
@@ -201,19 +207,21 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		EntityRendererRegistry.register(PeterwolfsPlanesMod.TRIPLANE_ENTITY, TriplaneRenderer::new);
 		EntityRendererRegistry.register(PeterwolfsPlanesMod.WATER_PLANE_ENTITY, WaterPlaneRenderer::new);
 		EntityRendererRegistry.register(PeterwolfsPlanesMod.MONOPLANE_ENTITY, MonoplaneRenderer::new);
+		EntityRendererRegistry.register(PeterwolfsPlanesMod.HELICOPTER_ENTITY, HelicopterRenderer::new);
 		EntityRendererRegistry.register(PeterwolfsPlanesMod.VILLAGER_PILOT_ENTITY, VillagerPilotRenderer::new);
 
 		// Register Model Layer
-		ModelLayerRegistry.registerModelLayer(PLANE_MODEL_LAYER, PlaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(LARGE_PLANE_MODEL_LAYER, LargePlaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(LARGE_TWIN_ENGINE_PLANE_MODEL_LAYER, LargeTwinEnginePlaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(TRIPLANE_MODEL_LAYER, TriplaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(WATER_PLANE_MODEL_LAYER, WaterPlaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(MONOPLANE_MODEL_LAYER, MonoplaneModel::createLayerDefinition);
-		ModelLayerRegistry.registerModelLayer(PARAGLIDER_MODEL_LAYER, ParagliderModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(PLANE_MODEL_LAYER, PlaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(LARGE_PLANE_MODEL_LAYER, LargePlaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(LARGE_TWIN_ENGINE_PLANE_MODEL_LAYER, LargeTwinEnginePlaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(TRIPLANE_MODEL_LAYER, TriplaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(WATER_PLANE_MODEL_LAYER, WaterPlaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(MONOPLANE_MODEL_LAYER, MonoplaneModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(HELICOPTER_MODEL_LAYER, HelicopterModel::createLayerDefinition);
+		EntityModelLayerRegistry.registerModelLayer(PARAGLIDER_MODEL_LAYER, ParagliderModel::createLayerDefinition);
 
 		// Register Paraglider Player Feature Renderer
-		LivingEntityRenderLayerRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
+		LivingEntityFeatureRendererRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
 			if (entityRenderer instanceof AvatarRenderer playerRenderer) {
 				ParagliderModel paragliderModel = new ParagliderModel(context.bakeLayer(PARAGLIDER_MODEL_LAYER));
 				registrationHelper.register(new ParagliderFeatureRenderer(playerRenderer, paragliderModel));
@@ -236,6 +244,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 
 		// Client Input & Prediction Loop
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			AircraftEngineSounds.tick(client);
 			if (client.player != null) {
 				boolean specializedPilot = client.player.getVehicle() instanceof PlaneEntity vehicle
 					&& !usesCombatControls(vehicle);
@@ -244,12 +253,14 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					if (specializedPilot) {
 						continue;
 					}
-					liftHudVisible = !liftHudVisible;
-					client.player.sendOverlayMessage(Component.translatable(
-						liftHudVisible
-							? "message.peterwolfs_planes.lift_hud_on"
-							: "message.peterwolfs_planes.lift_hud_off"
-					));
+					if (isParagliderVisuallyDeployed(client.player.getId())) {
+						liftHudVisible = !liftHudVisible;
+						client.player.displayClientMessage(Component.translatable(
+							liftHudVisible
+								? "message.peterwolfs_planes.lift_hud_on"
+								: "message.peterwolfs_planes.lift_hud_off"
+						), true);
+					}
 				}
 
 				previousParagliderRoll = paragliderRoll;
@@ -312,11 +323,11 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 							if (sTapTimer > 0) {
 								isFlareLocked = !isFlareLocked;
 								sTapTimer = 0;
-								client.player.sendOverlayMessage(Component.translatable(
+								client.player.displayClientMessage(Component.translatable(
 									isFlareLocked
 										? "message.peterwolfs_planes.flare_locked"
 										: "message.peterwolfs_planes.flare_unlocked"
-								));
+								), true);
 							} else {
 								sTapTimer = 8;
 							}
@@ -449,17 +460,30 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					boolean keyRight = client.options.keyRight.isDown();
 
 					float t = plane.getThrottle();
-					if (keyUp) {
-						t = Math.min(1.0f, t + 0.02f);
-					} else if (keyDown) {
-						t = Math.max(-1.0f, t - 0.02f);
+					if (plane.isHelicopter() && plane.isSimpleAltitudeControl()) {
+						if (keyUp) {
+							t = Mth.approach(t, 1.0f, 0.08f);
+						} else if (keyDown) {
+							t = Mth.approach(t, -1.0f, 0.08f);
+						} else {
+							t = Mth.approach(t, 0.0f, 0.12f);
+						}
+					} else {
+						if (keyUp) {
+							t = Math.min(1.0f, t + 0.02f);
+						} else if (keyDown) {
+							t = Math.max(-1.0f, t - 0.02f);
+						}
 					}
 
 					float rudder = 0.0f;
-					if (keyLeft) {
-						rudder = -1.0f;
-					} else if (keyRight) {
-						rudder = 1.0f;
+					boolean heliGrounded = plane.isHelicopter() && !plane.isHelicopterAirborne();
+					if (!heliGrounded) {
+						if (keyLeft && !keyRight) {
+							rudder = -1.0f;
+						} else if (keyRight && !keyLeft) {
+							rudder = 1.0f;
+						}
 					}
 
 					boolean combatControls = usesCombatControls(plane);
@@ -495,18 +519,29 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					// Local prediction of combat flag for HUD
 					plane.setCombatMode(combatControls && combatModeActive);
 
+					boolean heliAirborne = plane.isHelicopter() && plane.isHelicopterAirborne();
+					if (plane.isHelicopter() && !lastSentHelicopterAirborne && heliAirborne && client.player != null) {
+						client.player.setXRot(0.0F);
+						client.player.xRotO = 0.0F;
+						client.player.setYRot(plane.getYRot());
+						client.player.yRotO = plane.getYRot();
+						client.player.setYBodyRot(plane.getYRot());
+						client.player.setYHeadRot(plane.getYRot());
+					}
 					boolean shouldSend = t != lastSentThrottle
 						|| rudder != lastSentRoll
 						|| (combatControls && combatModeActive != lastSentCombatMode)
 						|| fireGuns != lastSentFireGuns
-						|| dropBomb;
+						|| dropBomb
+						|| (plane.isHelicopter() && heliAirborne != lastSentHelicopterAirborne);
 					if (shouldSend) {
 						lastSentThrottle = t;
 						lastSentRoll = rudder;
 						lastSentCombatMode = combatControls && combatModeActive;
 						lastSentFireGuns = fireGuns;
+						lastSentHelicopterAirborne = heliAirborne;
 						ClientPlayNetworking.send(new PlaneInputPayload(
-							t, rudder, combatControls && combatModeActive, fireGuns, dropBomb
+							t, rudder, combatControls && combatModeActive, fireGuns, dropBomb, heliAirborne
 						));
 					}
 				} else {
@@ -514,6 +549,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					lastSentRoll = 999.0f;
 					lastSentCombatMode = false;
 					lastSentFireGuns = false;
+					lastSentHelicopterAirborne = false;
 					combatModeActive = false;
 				}
 			} else {
@@ -532,7 +568,7 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 		// HUD overlay for plane instrumentation
 		HudElementRegistry.addLast(
 			Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "hud_overlay"),
-			(graphicsExtractor, deltaTracker) -> {
+			(graphics, deltaTracker) -> {
 				Minecraft client = Minecraft.getInstance();
 				if (client.player != null && client.player.getVehicle() instanceof PlaneEntity plane) {
 					Font font = client.font;
@@ -551,15 +587,46 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					float throttle = plane.getThrottle();
 					String throttleText;
 					int throttleColor = 0xFFFFFFFF;
-					if (throttle > 0.0f) {
-						throttleText = String.format("Throttle: %.0f%%", throttle * 100.0);
-						throttleColor = 0xFF55FFFF; // cyan
-					} else if (throttle < 0.0f) {
-						throttleText = String.format("Brake: %.0f%%", -throttle * 100.0);
-						throttleColor = 0xFFFF5555; // red
+					if (plane.isHelicopter() && plane.isSimpleAltitudeControl()) {
+						if (!plane.isHelicopterAirborne()) {
+							if (throttle > 0.05f) {
+								throttleText = String.format("Takeoff: LIFTOFF %.0f%% (W)", throttle * 100.0);
+								throttleColor = 0xFF55FF55; // green
+							} else {
+								throttleText = "Helicopter: ON GROUND (W to fly)";
+								throttleColor = 0xFFFFAA00; // orange
+							}
+						} else {
+							if (throttle > 0.05f) {
+								throttleText = String.format("Vertical: CLIMB %.0f%% (W)", throttle * 100.0);
+								throttleColor = 0xFF55FF55; // green
+							} else if (throttle < -0.05f) {
+								throttleText = String.format("Vertical: DESCEND %.0f%% (S)", -throttle * 100.0);
+								throttleColor = 0xFFFF5555; // red
+							} else {
+								throttleText = "Vertical: ALT HOLD (W/S)";
+								throttleColor = 0xFF55FFFF; // cyan
+							}
+						}
+					} else if (plane.isHelicopter() && !plane.isHelicopterAirborne()) {
+						if (throttle > 0.35f) {
+							throttleText = String.format("Takeoff: SPOOL UP %.0f%% (W)", throttle * 100.0);
+							throttleColor = 0xFF55FF55; // green
+						} else {
+							throttleText = "Helicopter: ON GROUND (W to fly)";
+							throttleColor = 0xFFFFAA00; // orange
+						}
 					} else {
-						throttleText = "Throttle: Idle";
-						throttleColor = 0xFFFFAA00; // orange
+						if (throttle > 0.0f) {
+							throttleText = String.format("Throttle: %.0f%%", throttle * 100.0);
+							throttleColor = 0xFF55FFFF; // cyan
+						} else if (throttle < 0.0f) {
+							throttleText = String.format("Brake: %.0f%%", -throttle * 100.0);
+							throttleColor = 0xFFFF5555; // red
+						} else {
+							throttleText = "Throttle: Idle";
+							throttleColor = 0xFFFFAA00; // orange
+						}
 					}
 
 					boolean showCombatHud = usesCombatControls(plane);
@@ -588,30 +655,34 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					int screenHeight = client.getWindow().getGuiScaledHeight();
 					int boxWidth = 168;
 					int boxHeight = showCombatHud ? 93 : 58;
-					int boxX = (screenWidth - boxWidth) / 2;
+					int stickWidth = 54;
+					int totalWidth = boxWidth + 4 + stickWidth;
+					int boxX = (screenWidth - totalWidth) / 2;
 					int boxY = (screenHeight - boxHeight) / 2 + (int) (screenHeight * 0.18);
-					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x88000000); // 50% opacity black
+					graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x88000000); // 50% opacity black
 
 					// Draw border
-					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF555555); // Top border
-					graphicsExtractor.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF555555); // Bottom border
-					graphicsExtractor.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF555555); // Left border
-					graphicsExtractor.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555); // Right border
+					graphics.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF555555); // Top border
+					graphics.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF555555); // Bottom border
+					graphics.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF555555); // Left border
+					graphics.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555); // Right border
 
 					// Draw texts inside the box
-					graphicsExtractor.text(font, speedText, boxX + 8, boxY + 6, 0xFFFFFFFF, false);
-					graphicsExtractor.text(font, altText, boxX + 8, boxY + 18, 0xFFFFFFFF, false);
-					graphicsExtractor.text(font, vsText, boxX + 8, boxY + 30, vsColor, false);
-					graphicsExtractor.text(font, throttleText, boxX + 8, boxY + 42, throttleColor, false);
+					graphics.drawString(font, speedText, boxX + 8, boxY + 6, 0xFFFFFFFF, false);
+					graphics.drawString(font, altText, boxX + 8, boxY + 18, 0xFFFFFFFF, false);
+					graphics.drawString(font, vsText, boxX + 8, boxY + 30, vsColor, false);
+					graphics.drawString(font, throttleText, boxX + 8, boxY + 42, throttleColor, false);
 					if (showCombatHud) {
-						graphicsExtractor.text(font, combatText, boxX + 8, boxY + 54, combatColor, false);
-						graphicsExtractor.text(font, hpText, boxX + 8, boxY + 66, hpColor, false);
-						graphicsExtractor.text(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
+						graphics.drawString(font, combatText, boxX + 8, boxY + 54, combatColor, false);
+						graphics.drawString(font, hpText, boxX + 8, boxY + 66, hpColor, false);
+						graphics.drawString(font, weaponsHint, boxX + 8, boxY + 78, 0xFFCCCCCC, false);
 					}
+
+					renderStickIndicator(graphics, font, plane, client, boxX + boxWidth + 4, boxY, stickWidth, boxHeight);
 				}
 
-				// LIFT HUD (H) — climb / sink + ridge updraft
-				if (liftHudVisible && client.player != null && client.level != null) {
+				// LIFT HUD (H) — climb / sink + ridge updraft (only when actively paragliding)
+				if (liftHudVisible && client.player != null && client.level != null && isParagliderVisuallyDeployed(client.player.getId())) {
 					Font font = client.font;
 
 					// Actual vertical speed of the player (blocks/tick → m/s)
@@ -673,35 +744,165 @@ public class PeterwolfsPlanesClient implements ClientModInitializer {
 					int barY = boxY + 53;
 					int barH = 4;
 
-					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x99000000);
-					graphicsExtractor.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF55AAFF);
-					graphicsExtractor.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
-					graphicsExtractor.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF555555);
-					graphicsExtractor.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
+					graphics.fill(boxX, boxY, boxX + boxWidth, boxY + boxHeight, 0x99000000);
+					graphics.fill(boxX, boxY, boxX + boxWidth, boxY + 1, 0xFF55AAFF);
+					graphics.fill(boxX, boxY + boxHeight - 1, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
+					graphics.fill(boxX, boxY, boxX + 1, boxY + boxHeight, 0xFF555555);
+					graphics.fill(boxX + boxWidth - 1, boxY, boxX + boxWidth, boxY + boxHeight, 0xFF555555);
 
-					graphicsExtractor.text(font, "LIFT", boxX + 8, boxY + 5, 0xFF55AAFF, false);
-					graphicsExtractor.text(font, vsText, boxX + 8, boxY + 17, trendColor, false);
-					graphicsExtractor.text(font, ridgeText, boxX + 8, boxY + 29, ridgeColor, false);
-					graphicsExtractor.text(font, modeHint, boxX + 8, boxY + 41, 0xFFAAAAAA, false);
+					graphics.drawString(font, "LIFT", boxX + 8, boxY + 5, 0xFF55AAFF, false);
+					graphics.drawString(font, vsText, boxX + 8, boxY + 17, trendColor, false);
+					graphics.drawString(font, ridgeText, boxX + 8, boxY + 29, ridgeColor, false);
+					graphics.drawString(font, modeHint, boxX + 8, boxY + 41, 0xFFAAAAAA, false);
 
 					// Centered V/S bar: left = sink (red), right = climb (green)
 					// Scale: ±4 m/s full deflection
 					double vsScale = 4.0D;
 					double frac = Mth.clamp(vyMs / vsScale, -1.0D, 1.0D);
 					int mid = barX + barW / 2;
-					graphicsExtractor.fill(barX, barY, barX + barW, barY + barH, 0xFF333333);
+					graphics.fill(barX, barY, barX + barW, barY + barH, 0xFF333333);
 					// zero marker
-					graphicsExtractor.fill(mid - 1, barY - 1, mid + 1, barY + barH + 1, 0xFFAAAAAA);
+					graphics.fill(mid - 1, barY - 1, mid + 1, barY + barH + 1, 0xFFAAAAAA);
 					if (frac > 0.0D) {
 						int fill = (int) (barW / 2.0D * frac);
-						graphicsExtractor.fill(mid, barY, mid + fill, barY + barH, 0xFF55FF55);
+						graphics.fill(mid, barY, mid + fill, barY + barH, 0xFF55FF55);
 					} else if (frac < 0.0D) {
 						int fill = (int) (barW / 2.0D * -frac);
-						graphicsExtractor.fill(mid - fill, barY, mid, barY + barH, 0xFFFF5555);
+						graphics.fill(mid - fill, barY, mid, barY + barH, 0xFFFF5555);
 					}
 				}
 			}
 		);
+	}
+
+	private static void renderStickIndicator(
+		GuiGraphics graphics,
+		Font font,
+		PlaneEntity plane,
+		Minecraft client,
+		int x,
+		int y,
+		int w,
+		int h
+	) {
+		Player pilot = client.player;
+		float stickDeflectionX = 0.0F;
+		float stickDeflectionY = 0.0F;
+
+		if (pilot != null) {
+			float relPitch = Mth.clamp(Mth.wrapDegrees(pilot.getXRot() - plane.getXRot()), -80.0F, 80.0F);
+			float relYaw = Mth.clamp(Mth.wrapDegrees(pilot.getYRot() - plane.getYRot()), -80.0F, 80.0F);
+
+			if (plane.isHelicopter()) {
+				if (!plane.isHelicopterAirborne()) {
+					stickDeflectionX = 0.0F;
+					stickDeflectionY = 0.0F;
+				} else {
+					// Lateral cyclic (Roll): right = positive X, left = negative X
+					stickDeflectionX = Mth.clamp((relYaw / 20.0F) + (plane.getRoll() / 14.0F), -1.0F, 1.0F);
+					// Longitudinal cyclic (Pitch): forward / push = positive Y (up), back / pull = negative Y (down)
+					stickDeflectionY = Mth.clamp((plane.getXRot() / 16.0F) - (relPitch / 20.0F), -1.0F, 1.0F);
+				}
+			} else {
+				float rudder = plane.getRudder();
+				stickDeflectionX = Mth.clamp((relYaw / 30.0F) + (rudder * 0.5F) + (plane.getRoll() / 45.0F), -1.0F, 1.0F);
+				stickDeflectionY = Mth.clamp((plane.getXRot() / 30.0F) - (relPitch / 30.0F), -1.0F, 1.0F);
+			}
+		}
+
+		graphics.fill(x, y, x + w, y + h, 0x88000000);
+		graphics.fill(x, y, x + w, y + 1, 0xFF555555);
+		graphics.fill(x, y + h - 1, x + w, y + h, 0xFF555555);
+		graphics.fill(x, y, x + 1, y + h, 0xFF555555);
+		graphics.fill(x + w - 1, y, x + w, y + h, 0xFF555555);
+
+		boolean centered = Math.abs(stickDeflectionX) <= 0.16F && Math.abs(stickDeflectionY) <= 0.16F;
+
+		String label;
+		int labelColor;
+		if (plane.isHelicopter() && !plane.isHelicopterAirborne()) {
+			label = "GROUND";
+			labelColor = 0xFFFFAA00;
+		} else if (centered) {
+			label = "CENTER";
+			labelColor = 0xFF55FF55;
+		} else {
+			label = plane.isHelicopter() ? "CYCLIC" : "STICK";
+			labelColor = 0xFFAAAAAA;
+		}
+		int labelX = x + (w - font.width(label)) / 2;
+		graphics.drawString(font, label, labelX, y + 4, labelColor, false);
+
+		int cx = x + w / 2;
+		int cy = h >= 80 ? y + 28 : y + 31;
+		int rx = 18;
+		int ry = 14;
+
+		// Arena background & subtle boundary
+		graphics.fill(cx - rx, cy - ry, cx + rx + 1, cy + ry + 1, 0x44000000);
+		graphics.fill(cx - rx, cy - ry, cx + rx + 1, cy - ry + 1, 0x33AAAAAA);
+		graphics.fill(cx - rx, cy + ry, cx + rx + 1, cy + ry + 1, 0x33AAAAAA);
+		graphics.fill(cx - rx, cy - ry, cx - rx + 1, cy + ry + 1, 0x33AAAAAA);
+		graphics.fill(cx + rx, cy - ry, cx + rx + 1, cy + ry + 1, 0x33AAAAAA);
+
+		// Center Crosshair
+		graphics.fill(cx - rx + 2, cy, cx + rx - 1, cy + 1, 0x44888888);
+		graphics.fill(cx, cy - ry + 2, cx + 1, cy + ry - 1, 0x44888888);
+
+		// Target Center Box (Deadband)
+		int targetR = 3;
+		int boxBorderColor = centered ? 0xFF55FF55 : 0x55888888;
+		if (centered) {
+			graphics.fill(cx - targetR, cy - targetR, cx + targetR + 1, cy + targetR + 1, 0x5500AA00);
+		}
+		graphics.fill(cx - targetR, cy - targetR, cx + targetR + 1, cy - targetR + 1, boxBorderColor);
+		graphics.fill(cx - targetR, cy + targetR, cx + targetR + 1, cy + targetR + 1, boxBorderColor);
+		graphics.fill(cx - targetR, cy - targetR, cx - targetR + 1, cy + targetR + 1, boxBorderColor);
+		graphics.fill(cx + targetR, cy - targetR, cx + targetR + 1, cy + targetR + 1, boxBorderColor);
+
+		// Stick Position Marker
+		int px = cx + Math.round(stickDeflectionX * rx);
+		int py = cy - Math.round(stickDeflectionY * ry);
+		px = Mth.clamp(px, cx - rx + 1, cx + rx - 1);
+		py = Mth.clamp(py, cy - ry + 1, cy + ry - 1);
+
+		int dotColor;
+		if (centered) {
+			dotColor = 0xFF55FF55;
+		} else if (Math.abs(stickDeflectionX) > 0.75F || Math.abs(stickDeflectionY) > 0.75F) {
+			dotColor = 0xFFFF5555;
+		} else {
+			dotColor = 0xFF55FFFF;
+		}
+		graphics.fill(px - 1, py - 1, px + 2, py + 2, dotColor);
+		graphics.fill(px, py, px + 1, py + 1, 0xFFFFFFFF);
+
+		// Extra info for taller panels (h >= 80)
+		if (h >= 80) {
+			boolean isHover = plane.isHelicopter() && plane.isHelicopterAirborne() && Math.abs(plane.getXRot()) < 4.0F && Math.abs(plane.getRoll()) < 4.0F && centered;
+			String modeBadge = plane.isHelicopter()
+				? (!plane.isHelicopterAirborne() ? "PARKED" : (isHover ? "HOVER" : (plane.getInstrumentSpeedMetersPerSecond() > 3.0 ? "CRUISE" : "MANVR")))
+				: (plane.getInstrumentSpeedMetersPerSecond() > 3.0 ? "CRUISE" : "MANVR");
+			int modeColor = (plane.isHelicopter() && !plane.isHelicopterAirborne()) ? 0xFFFFAA00 : (isHover ? 0xFF55FF55 : 0xFF55FFFF);
+			graphics.drawString(font, modeBadge, x + (w - font.width(modeBadge)) / 2, y + 48, modeColor, false);
+
+			String pText = String.format("P %+.0f°", plane.getXRot());
+			String rText = String.format("R %+.0f°", plane.getRoll());
+			graphics.drawString(font, pText, x + 6, y + 58, 0xFFCCCCCC, false);
+			graphics.drawString(font, rText, x + 6, y + 68, 0xFFCCCCCC, false);
+		}
+
+		// Rudder Bar
+		int barY = y + h - 6;
+		int barW = 36;
+		int barLeft = x + (w - barW) / 2;
+		graphics.fill(barLeft, barY, barLeft + barW, barY + 2, 0x44555555);
+		graphics.fill(cx, barY - 1, cx + 1, barY + 3, 0x88AAAAAA);
+		float rudder = plane.getRudder();
+		int rudX = cx + Math.round(rudder * (barW / 2 - 2));
+		rudX = Mth.clamp(rudX, barLeft, barLeft + barW - 1);
+		int rudColor = Math.abs(rudder) < 0.1F ? 0xFF55FF55 : 0xFFFFAA00;
+		graphics.fill(rudX - 1, barY - 1, rudX + 2, barY + 3, rudColor);
 	}
 
 	private static float approachBrake(float current, float target) {

@@ -13,13 +13,25 @@ public class MonoplaneModel extends EntityModel<PlaneRenderState> {
 	private final ModelPart propeller;
 	private final ModelPart speedNeedle;
 	private final ModelPart altNeedle;
+	private final ModelPart controlStick;
+	private final ModelPart lights;
+	private final ModelPart leftStrobe;
+	private final ModelPart rightStrobe;
+	private final ModelPart tailStrobe;
+	private final ModelPart beaconLight;
 
 	public MonoplaneModel(ModelPart root) {
-		super(root);
+		super(root.getChild("body"));
 		this.mainBody = root.getChild("body");
 		this.propeller = this.mainBody.getChild("propeller");
 		this.speedNeedle = this.mainBody.getChild("speed_dial").getChild("speed_needle");
 		this.altNeedle = this.mainBody.getChild("alt_dial").getChild("alt_needle");
+		this.controlStick = this.mainBody.getChild("control_stick");
+		this.lights = root.getChild("lights");
+		this.leftStrobe = this.lights.getChild("left_strobe");
+		this.rightStrobe = this.lights.getChild("right_strobe");
+		this.tailStrobe = this.lights.getChild("tail_strobe");
+		this.beaconLight = this.lights.getChild("tail_beacon");
 	}
 
 	public static LayerDefinition createLayerDefinition() {
@@ -129,6 +141,70 @@ public class MonoplaneModel extends EntityModel<PlaneRenderState> {
 			PartPose.offset(0.0F, 0.0F, -0.1F)
 		);
 
+		PlaneModel.addControlStick(body);
+
+		// --- Dedicated Emissive Aircraft Warning & Navigation Lights ---
+		PartDefinition lights = rootPart.addOrReplaceChild("lights",
+			CubeListBuilder.create(),
+			PartPose.offset(0.0F, 14.0F, 0.0F)
+		);
+
+		// Left Wingtip Nav Light (Port - Steady Aviation Red)
+		lights.addOrReplaceChild("left_nav_light",
+			CubeListBuilder.create()
+				.texOffs(0, 0)
+				.addBox(-46.0F, 3.5F, -5.5F, 1.0F, 1.0F, 3.0F),
+			PartPose.ZERO
+		);
+
+		// Left Strobe (Port - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("left_strobe",
+			CubeListBuilder.create()
+				.texOffs(16, 0)
+				.addBox(-46.0F, 3.5F, -2.0F, 1.0F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
+		// Right Wingtip Nav Light (Starboard - Steady Aviation Green)
+		lights.addOrReplaceChild("right_nav_light",
+			CubeListBuilder.create()
+				.texOffs(32, 0)
+				.addBox(45.0F, 3.5F, -5.5F, 1.0F, 1.0F, 3.0F),
+			PartPose.ZERO
+		);
+
+		// Right Strobe (Starboard - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("right_strobe",
+			CubeListBuilder.create()
+				.texOffs(48, 0)
+				.addBox(45.0F, 3.5F, -2.0F, 1.0F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
+		// Tail Aft Nav Light (Aft - Steady Aviation White)
+		lights.addOrReplaceChild("tail_nav_light",
+			CubeListBuilder.create()
+				.texOffs(64, 0)
+				.addBox(-0.5F, -4.0F, 40.0F, 1.0F, 1.4F, 1.0F),
+			PartPose.ZERO
+		);
+
+		// Tail Strobe (Aft - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("tail_strobe",
+			CubeListBuilder.create()
+				.texOffs(80, 0)
+				.addBox(-0.5F, -5.8F, 40.0F, 1.0F, 1.2F, 1.0F),
+			PartPose.ZERO
+		);
+
+		// Tail Beacon Light (Rudder Fin Top - Flashing Aviation Red)
+		lights.addOrReplaceChild("tail_beacon",
+			CubeListBuilder.create()
+				.texOffs(96, 0)
+				.addBox(-0.75F, -19.6F, 35.5F, 1.5F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
 		return LayerDefinition.create(mesh, 256, 128);
 	}
 
@@ -138,7 +214,22 @@ public class MonoplaneModel extends EntityModel<PlaneRenderState> {
 		this.propeller.zRot = (float) Math.toRadians(state.propellerAngle);
 		this.mainBody.xRot = (float) Math.toRadians(state.pitch);
 		this.mainBody.zRot = (float) Math.toRadians(-state.roll);
+		this.lights.visible = state.lightsOn;
+		this.lights.xRot = this.mainBody.xRot;
+		this.lights.zRot = this.mainBody.zRot;
 		this.speedNeedle.zRot = (float) Math.toRadians(state.speed * 9.0f);
 		this.altNeedle.zRot = (float) Math.toRadians(state.altitude * 3.6f);
+		PlaneModel.animateControlStick(this.controlStick, state);
+
+		boolean strobeActive = state.lightsOn && PlaneModel.isStrobeFlash(state.ageInTicks);
+		boolean beaconActive = state.lightsOn && PlaneModel.isBeaconFlash(state.ageInTicks);
+		this.leftStrobe.visible = strobeActive;
+		this.rightStrobe.visible = strobeActive;
+		this.tailStrobe.visible = strobeActive;
+		this.beaconLight.visible = beaconActive;
+	}
+
+	public ModelPart getLights() {
+		return this.lights;
 	}
 }
