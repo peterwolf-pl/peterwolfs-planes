@@ -15,7 +15,7 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 
 	@Override
 	public Item getDropItem() {
-		return PeterwolfsPlanesMod.WATER_PLANE_ITEM;
+		return PeterwolfsPlanesMod.WATER_PLANE_ITEM.get();
 	}
 
 	public double getWaterSurfaceY() {
@@ -59,6 +59,16 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 	@Override
 	protected boolean hasSurfaceSupport() {
 		return this.isOnWater();
+	}
+
+	@Override
+	protected double getLandingSafeSinkRate(boolean waterSurface) {
+		return waterSurface ? 0.34D : super.getLandingSafeSinkRate(false);
+	}
+
+	@Override
+	protected double getLandingFatalSinkRate(boolean waterSurface) {
+		return waterSurface ? 1.05D : super.getLandingFatalSinkRate(false);
 	}
 
 	@Override
