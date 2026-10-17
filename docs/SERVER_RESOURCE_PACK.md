@@ -4,7 +4,7 @@
 
 | Plik | Opis |
 |---|---|
-| `peterwolfs-planes-1.1.0-resourcepack.zip` | Gotowy resource pack (format 88 / MC 26.2) |
+| `peterwolfs-planes-1.1.0-resourcepack.zip` | Gotowy resource pack (format 97.1 / MC 26.3) |
 | `peterwolfs-planes-1.1.0-resourcepack.zip.sha1` | SHA-1 do `resource-pack-sha1` |
 | `server.properties.snippet` | Fragment konfiguracji serwera |
 

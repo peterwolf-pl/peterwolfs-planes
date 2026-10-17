@@ -62,6 +62,16 @@ public class WaterPlaneEntity extends LargePlaneEntity {
 	}
 
 	@Override
+	protected double getLandingSafeSinkRate(boolean waterSurface) {
+		return waterSurface ? 0.34D : super.getLandingSafeSinkRate(false);
+	}
+
+	@Override
+	protected double getLandingFatalSinkRate(boolean waterSurface) {
+		return waterSurface ? 1.05D : super.getLandingFatalSinkRate(false);
+	}
+
+	@Override
 	protected float getEmptyGroundVisualPitch() {
 		// Two long floats support the airframe along its length, so it parks
 		// level instead of resting tail-low like two-wheel landing gear.

@@ -31,7 +31,7 @@ public abstract class AvatarRendererMixin {
 		float partialTick = Minecraft.getInstance().getDeltaTracker().getGameTimeDeltaPartialTick(false);
 		float rollDegrees = PeterwolfsPlanesClient.getParagliderRollForEntity(state.id, partialTick);
 		if (Math.abs(rollDegrees) > 0.01f) {
-			poseStack.mulPose(Axis.ZP.rotationDegrees(rollDegrees));
+			poseStack.rotateDegrees(Axis.ZP, rollDegrees);
 		}
 	}
 }

@@ -8,10 +8,13 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 
 public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderState> {
 	private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/plane.png");
+	private static final Identifier LIGHTS_TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/aircraft_lights.png");
 	private final PlaneModel model;
 
 	public PlaneRenderer(EntityRendererProvider.Context context) {
@@ -34,18 +37,23 @@ public class PlaneRenderer extends EntityRenderer<PlaneEntity, PlaneRenderState>
 		state.propellerAngle = entity.getPropellerAngle(partialTick);
 		state.speed = (float) entity.getInstrumentSpeedMetersPerSecond();
 		state.altitude = (float) state.y;
+		state.ageInTicks = entity.tickCount + partialTick;
+		state.extractControlStick(entity, partialTick);
 	}
 
 	@Override
 	public void submit(PlaneRenderState state, PoseStack poseStack, SubmitNodeCollector collector, CameraRenderState cameraState) {
 		super.submit(state, poseStack, collector, cameraState);
 		poseStack.pushPose();
-		poseStack.mulPose(com.mojang.math.Axis.YP.rotationDegrees(180.0F - state.yRot));
+		poseStack.rotateDegrees(com.mojang.math.Axis.YP, 180.0F - state.yRot);
 		poseStack.scale(-1.0F, -1.0F, 1.0F);
 		poseStack.translate(0.0F, -1.5F, 0.0F);
 		
 		this.model.setupAnim(state);
-		collector.submitModel(this.model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+		collector.submitModel(this.model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor);
+		if (state.lightsOn) {
+			collector.submitModelPart(this.model.getLights(), poseStack, RenderTypes.eyes(LIGHTS_TEXTURE), 15728880, OverlayTexture.NO_OVERLAY, null);
+		}
 		
 		poseStack.popPose();
 	}

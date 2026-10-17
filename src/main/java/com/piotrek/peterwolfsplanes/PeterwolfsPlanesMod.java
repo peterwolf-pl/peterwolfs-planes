@@ -18,6 +18,8 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.MobCategory;
@@ -30,17 +32,21 @@ import net.minecraft.server.level.ServerPlayer;
 import com.piotrek.peterwolfsplanes.entity.VillagerPilotEntity;
 import com.piotrek.peterwolfsplanes.item.SquadronHornItem;
 import net.minecraft.world.item.SpawnEggItem;
+import net.minecraft.world.level.levelgen.structure.Structure;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.piotrek.peterwolfsplanes.entity.MonoplaneEntity;
+import com.piotrek.peterwolfsplanes.entity.HelicopterEntity;
 import com.piotrek.peterwolfsplanes.item.ParagliderBackpackItem;
 import com.piotrek.peterwolfsplanes.network.ParagliderSyncPayload;
 
 public class PeterwolfsPlanesMod implements ModInitializer {
 	public static final String MOD_ID = "peterwolfs_planes";
 	public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+	public static final ResourceKey<Structure> RUNWAY_STRUCTURE_KEY = ResourceKey.create(Registries.STRUCTURE, id("runway"));
+	public static final TagKey<Structure> RUNWAY_STRUCTURES_TAG = TagKey.create(Registries.STRUCTURE, id("runways"));
 
 	public static final ResourceKey<EntityType<?>> PLANE_ENTITY_KEY = ResourceKey.create(Registries.ENTITY_TYPE, id("plane"));
 	public static final EntityType<PlaneEntity> PLANE_ENTITY = Registry.register(
@@ -102,6 +108,16 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 			.build(MONOPLANE_ENTITY_KEY)
 	);
 
+	public static final ResourceKey<EntityType<?>> HELICOPTER_ENTITY_KEY = ResourceKey.create(Registries.ENTITY_TYPE, id("helicopter"));
+	public static final EntityType<HelicopterEntity> HELICOPTER_ENTITY = Registry.register(
+		BuiltInRegistries.ENTITY_TYPE,
+		HELICOPTER_ENTITY_KEY,
+		EntityType.Builder.<HelicopterEntity>of(HelicopterEntity::new, MobCategory.MISC)
+			.sized(3.4f, 2.6f)
+			.clientTrackingRange(10)
+			.build(HELICOPTER_ENTITY_KEY)
+	);
+
 	public static final ResourceKey<EntityType<?>> VILLAGER_PILOT_ENTITY_KEY = ResourceKey.create(Registries.ENTITY_TYPE, id("villager_pilot"));
 	public static final EntityType<VillagerPilotEntity> VILLAGER_PILOT_ENTITY = Registry.register(
 		BuiltInRegistries.ENTITY_TYPE,
@@ -154,6 +170,13 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 		new PlaneItem(new Item.Properties().setId(MONOPLANE_ITEM_KEY).stacksTo(1), (world) -> new MonoplaneEntity(MONOPLANE_ENTITY, world))
 	);
 
+	public static final ResourceKey<Item> HELICOPTER_ITEM_KEY = ResourceKey.create(Registries.ITEM, id("helicopter"));
+	public static final PlaneItem HELICOPTER_ITEM = Registry.register(
+		BuiltInRegistries.ITEM,
+		HELICOPTER_ITEM_KEY,
+		new PlaneItem(new Item.Properties().setId(HELICOPTER_ITEM_KEY).stacksTo(1), (world) -> new HelicopterEntity(HELICOPTER_ENTITY, world))
+	);
+
 	public static final ResourceKey<Item> PARAGLIDER_BACKPACK_KEY = ResourceKey.create(Registries.ITEM, id("paraglider_backpack"));
 	public static final ParagliderBackpackItem PARAGLIDER_BACKPACK = Registry.register(
 		BuiltInRegistries.ITEM,
@@ -175,6 +198,17 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 		new SquadronHornItem(new Item.Properties().setId(SQUADRON_HORN_ITEM_KEY).stacksTo(1))
 	);
 
+	public static final SoundEvent PLANE_ENGINE_SOUND = Registry.register(
+		BuiltInRegistries.SOUND_EVENT,
+		id("entity.plane.engine"),
+		SoundEvent.createFixedRangeEvent(id("entity.plane.engine"), 64.0F)
+	);
+	public static final SoundEvent HELICOPTER_ENGINE_SOUND = Registry.register(
+		BuiltInRegistries.SOUND_EVENT,
+		id("entity.helicopter.engine"),
+		SoundEvent.createFixedRangeEvent(id("entity.helicopter.engine"), 64.0F)
+	);
+
 	public static final CreativeModeTab PLANES_GROUP = FabricCreativeModeTab.builder()
 		.title(Component.translatable("itemGroup.peterwolfs_planes.group"))
 		.displayItems((params, output) -> {
@@ -184,6 +218,7 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 			output.accept(WATER_PLANE_ITEM.getDefaultInstance());
 			output.accept(TRIPLANE_ITEM.getDefaultInstance());
 			output.accept(MONOPLANE_ITEM.getDefaultInstance());
+			output.accept(HELICOPTER_ITEM.getDefaultInstance());
 			output.accept(PARAGLIDER_BACKPACK.getDefaultInstance());
 			output.accept(VILLAGER_PILOT_SPAWN_EGG.getDefaultInstance());
 			output.accept(SQUADRON_HORN.getDefaultInstance());
@@ -203,7 +238,8 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 			output.insertAfter(LARGE_TWIN_ENGINE_PLANE_ITEM, WATER_PLANE_ITEM);
 			output.insertAfter(WATER_PLANE_ITEM, TRIPLANE_ITEM);
 			output.insertAfter(TRIPLANE_ITEM, MONOPLANE_ITEM);
-			output.insertAfter(MONOPLANE_ITEM, VILLAGER_PILOT_SPAWN_EGG);
+			output.insertAfter(MONOPLANE_ITEM, HELICOPTER_ITEM);
+			output.insertAfter(HELICOPTER_ITEM, VILLAGER_PILOT_SPAWN_EGG);
 			output.insertAfter(VILLAGER_PILOT_SPAWN_EGG, SQUADRON_HORN);
 		});
 
@@ -228,6 +264,9 @@ public class PeterwolfsPlanesMod implements ModInitializer {
 					plane.setThrottle(payload.throttle());
 					plane.setRudder(payload.rudder());
 					plane.applyCombatInput(payload.combatMode(), payload.fireGuns(), payload.dropBomb());
+					if (plane.isHelicopter()) {
+						plane.setHelicopterAirborne(payload.helicopterAirborne());
+					}
 				}
 			});
 		});

@@ -54,6 +54,9 @@ public class VillagerPilotEntity extends PathfinderMob {
 			if (nearestEmpty != null) {
 				if (this.distanceToSqr(nearestEmpty) < 4.0D) {
 					this.startRiding(nearestEmpty);
+					if (this.getVehicle() == nearestEmpty) {
+						nearestEmpty.beginNpcFlight();
+					}
 					// Set a short cooldown in case startRiding fails
 					if (!(this.getVehicle() instanceof PlaneEntity)) {
 						this.planeCooldown = 20;
@@ -74,6 +77,9 @@ public class VillagerPilotEntity extends PathfinderMob {
 				plane.setYRot(this.getYRot());
 				this.level().addFreshEntity(plane);
 				this.startRiding(plane);
+				if (this.getVehicle() == plane) {
+					plane.beginNpcFlight();
+				}
 				// Prevent any re-spawn for at least 2 seconds
 				this.planeCooldown = 40;
 			}

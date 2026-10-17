@@ -109,7 +109,7 @@ public class ParagliderFeatureRenderer extends RenderLayer<AvatarRenderState, Pl
 						line.zScale *= thicknessMul;
 						collector.submitModelPart(
 							line, poseStack, brakeRenderType, packedLight, OverlayTexture.NO_OVERLAY,
-							null, brakeTint, null, 0
+							null, brakeTint
 						);
 					}
 				}
@@ -119,7 +119,7 @@ public class ParagliderFeatureRenderer extends RenderLayer<AvatarRenderState, Pl
 						line.zScale *= thicknessMul;
 						collector.submitModelPart(
 							line, poseStack, brakeRenderType, packedLight, OverlayTexture.NO_OVERLAY,
-							null, brakeTint, null, 0
+							null, brakeTint
 						);
 					}
 				}

@@ -56,7 +56,7 @@ public final class WaterPlaneClientGameTest implements FabricClientGameTest {
 				}
 				return plane.onGround() && Math.abs(plane.getVisualPitch(1.0F)) < 1.0F;
 			}, 200);
-			singleplayer.getClientLevel().waitForChunksRender();
+			singleplayer.getConnection().waitForChunksRender();
 			context.runOnClient(client -> {
 				client.options.setCameraType(CameraType.FIRST_PERSON);
 				client.options.fov().set(80);

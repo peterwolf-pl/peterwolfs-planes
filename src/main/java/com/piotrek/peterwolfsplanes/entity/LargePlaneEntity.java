@@ -17,6 +17,11 @@ public class LargePlaneEntity extends PlaneEntity {
 	}
 
 	@Override
+	protected float getEngineSoundVolumeMultiplier() {
+		return 1.08F;
+	}
+
+	@Override
 	protected void positionRider(Entity passenger, MoveFunction moveFunction) {
 		if (this.hasPassenger(passenger)) {
 			float yawRad = (float) Math.toRadians(this.getYRot());

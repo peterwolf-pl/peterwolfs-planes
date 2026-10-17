@@ -20,9 +20,9 @@ cp src/main/resources/assets/peterwolfs_planes/icon.png "$RP_DIR/pack.png"
 cat > "$RP_DIR/pack.mcmeta" << 'EOF'
 {
   "pack": {
-    "description": "Peter Wolf's Planes – textures, item models & lang (MC 26.2 / format 88)",
-    "min_format": [88, 0],
-    "max_format": [88, 0]
+    "description": "Peter Wolf's Planes – textures, item models & lang (MC 26.3 / format 97.1)",
+    "min_format": [97, 1],
+    "max_format": [97, 1]
   }
 }
 EOF
@@ -30,7 +30,7 @@ EOF
 cat > "$RP_DIR/README.txt" << EOF
 Peter Wolf's Planes – Server Resource Pack
 Version: ${VERSION}
-Minecraft: 26.2 (resource pack format 88)
+Minecraft: 26.3 (resource pack format 97.1)
 
 Contents:
   assets/peterwolfs_planes/  item models, textures, languages (EN/PL), icon, banner
@@ -88,7 +88,7 @@ cat > "${DIST_DIR}/SERVER_RESOURCE_PACK.md" << EOF
 
 | Plik | Opis |
 |---|---|
-| \`${ZIP_NAME}\` | Gotowy resource pack (format 88 / MC 26.2) |
+| \`${ZIP_NAME}\` | Gotowy resource pack (format 97.1 / MC 26.3) |
 | \`${ZIP_NAME}.sha1\` | SHA-1 do \`resource-pack-sha1\` |
 | \`server.properties.snippet\` | Fragment konfiguracji serwera |
 
