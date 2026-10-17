@@ -13,7 +13,12 @@ public class LargePlaneEntity extends PlaneEntity {
 
 	@Override
 	public Item getDropItem() {
-		return PeterwolfsPlanesMod.LARGE_PLANE_ITEM;
+		return PeterwolfsPlanesMod.LARGE_PLANE_ITEM.get();
+	}
+
+	@Override
+	protected float getEngineSoundVolumeMultiplier() {
+		return 1.08F;
 	}
 
 	@Override

@@ -12,6 +12,16 @@ public class LargeTwinEnginePlaneEntity extends LargePlaneEntity {
 
 	@Override
 	public Item getDropItem() {
-		return PeterwolfsPlanesMod.LARGE_TWIN_ENGINE_PLANE_ITEM;
+		return PeterwolfsPlanesMod.LARGE_TWIN_ENGINE_PLANE_ITEM.get();
+	}
+
+	@Override
+	protected float getEngineSoundVolumeMultiplier() {
+		return 1.18F;
+	}
+
+	@Override
+	protected float getEngineSoundPitchBase() {
+		return 0.76F;
 	}
 }

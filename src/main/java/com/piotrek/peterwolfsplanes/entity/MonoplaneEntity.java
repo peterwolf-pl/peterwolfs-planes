@@ -12,7 +12,7 @@ public class MonoplaneEntity extends PlaneEntity {
 
 	@Override
 	public Item getDropItem() {
-		return PeterwolfsPlanesMod.MONOPLANE_ITEM;
+		return PeterwolfsPlanesMod.MONOPLANE_ITEM.get();
 	}
 
 	@Override

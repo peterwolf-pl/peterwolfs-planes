@@ -10,7 +10,8 @@ public record PlaneInputPayload(
 	float rudder,
 	boolean combatMode,
 	boolean fireGuns,
-	boolean dropBomb
+	boolean dropBomb,
+	boolean helicopterAirborne
 ) implements CustomPacketPayload {
 	public static final Identifier ID = Identifier.fromNamespaceAndPath("peterwolfs_planes", "plane_input");
 	public static final CustomPacketPayload.Type<PlaneInputPayload> TYPE = new CustomPacketPayload.Type<>(ID);
@@ -21,6 +22,7 @@ public record PlaneInputPayload(
 			return new PlaneInputPayload(
 				buf.readFloat(),
 				buf.readFloat(),
+				buf.readBoolean(),
 				buf.readBoolean(),
 				buf.readBoolean(),
 				buf.readBoolean()
@@ -34,6 +36,7 @@ public record PlaneInputPayload(
 			buf.writeBoolean(value.combatMode);
 			buf.writeBoolean(value.fireGuns);
 			buf.writeBoolean(value.dropBomb);
+			buf.writeBoolean(value.helicopterAirborne);
 		}
 	};
 
