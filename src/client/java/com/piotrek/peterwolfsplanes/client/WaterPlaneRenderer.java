@@ -8,10 +8,12 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.resources.Identifier;
 
 public class WaterPlaneRenderer extends EntityRenderer<WaterPlaneEntity, PlaneRenderState> {
 	private static final Identifier TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/water_plane.png");
+	private static final Identifier LIGHTS_TEXTURE = Identifier.fromNamespaceAndPath(PeterwolfsPlanesMod.MOD_ID, "textures/entity/aircraft_lights.png");
 	private static final float WATER_RENDER_Y_OFFSET = -1.5F;
 	private static final float LAND_RENDER_Y_OFFSET = -27.0F / 16.0F;
 	private final WaterPlaneModel model;
@@ -37,6 +39,8 @@ public class WaterPlaneRenderer extends EntityRenderer<WaterPlaneEntity, PlaneRe
 		state.speed = (float) entity.getInstrumentSpeedMetersPerSecond();
 		state.altitude = (float) state.y;
 		state.restingOnSolidGround = entity.onGround() && !entity.isRestingOnWater();
+		state.ageInTicks = entity.tickCount + partialTick;
+		state.extractControlStick(entity, partialTick);
 	}
 
 	@Override
@@ -52,6 +56,9 @@ public class WaterPlaneRenderer extends EntityRenderer<WaterPlaneEntity, PlaneRe
 		
 		this.model.setupAnim(state);
 		collector.submitModel(this.model, state, poseStack, TEXTURE, state.lightCoords, OverlayTexture.NO_OVERLAY, state.outlineColor, null);
+		if (state.lightsOn) {
+			collector.submitModelPart(this.model.getLights(), poseStack, RenderTypes.eyes(LIGHTS_TEXTURE), 15728880, OverlayTexture.NO_OVERLAY, null);
+		}
 		
 		poseStack.popPose();
 	}

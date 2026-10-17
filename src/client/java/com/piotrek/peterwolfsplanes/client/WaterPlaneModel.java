@@ -160,6 +160,70 @@ public class WaterPlaneModel extends PlaneModel {
 			PartPose.offset(0.0F, 0.0F, -0.1F)
 		);
 
+		addControlStick(body);
+
+		// --- Dedicated Emissive Aircraft Warning & Navigation Lights ---
+		PartDefinition lights = rootPart.addOrReplaceChild("lights",
+			CubeListBuilder.create(),
+			PartPose.offset(0.0F, 14.0F, 0.0F)
+		);
+
+		// Left Wingtip Nav Light (Port - Steady Aviation Red)
+		lights.addOrReplaceChild("left_nav_light",
+			CubeListBuilder.create()
+				.texOffs(0, 0)
+				.addBox(-55.0F, -9.5F, -5.5F, 1.0F, 1.0F, 3.0F),
+			PartPose.ZERO
+		);
+
+		// Left Strobe (Port - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("left_strobe",
+			CubeListBuilder.create()
+				.texOffs(16, 0)
+				.addBox(-55.0F, -9.5F, -2.0F, 1.0F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
+		// Right Wingtip Nav Light (Starboard - Steady Aviation Green)
+		lights.addOrReplaceChild("right_nav_light",
+			CubeListBuilder.create()
+				.texOffs(32, 0)
+				.addBox(54.0F, -9.5F, -5.5F, 1.0F, 1.0F, 3.0F),
+			PartPose.ZERO
+		);
+
+		// Right Strobe (Starboard - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("right_strobe",
+			CubeListBuilder.create()
+				.texOffs(48, 0)
+				.addBox(54.0F, -9.5F, -2.0F, 1.0F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
+		// Tail Aft Nav Light (Aft - Steady Aviation White)
+		lights.addOrReplaceChild("tail_nav_light",
+			CubeListBuilder.create()
+				.texOffs(64, 0)
+				.addBox(-0.5F, -4.0F, 44.0F, 1.0F, 1.4F, 1.0F),
+			PartPose.ZERO
+		);
+
+		// Tail Strobe (Aft - High-Intensity Flashing White Xenon)
+		lights.addOrReplaceChild("tail_strobe",
+			CubeListBuilder.create()
+				.texOffs(80, 0)
+				.addBox(-0.5F, -5.8F, 44.0F, 1.0F, 1.2F, 1.0F),
+			PartPose.ZERO
+		);
+
+		// Anti-Collision Flashing Red Beacon (Top of Rudder Fin)
+		lights.addOrReplaceChild("tail_beacon",
+			CubeListBuilder.create()
+				.texOffs(96, 0)
+				.addBox(-0.75F, -19.6F, 38.5F, 1.5F, 1.0F, 2.0F),
+			PartPose.ZERO
+		);
+
 		return LayerDefinition.create(mesh, 256, 128);
 	}
 }

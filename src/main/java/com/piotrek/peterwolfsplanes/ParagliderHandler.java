@@ -86,7 +86,7 @@ public class ParagliderHandler {
 
 						player.setDeltaMovement(new Vec3(moveX, vertical, moveZ));
 
-						player.hurtMarked = true;
+						player.needsSync = true;
 						player.fallDistance = 0.0F;
 					}
 				}

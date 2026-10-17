@@ -31,7 +31,7 @@
 | **Water Plane** | Seaplane with floats (needs a boat in the recipe) |
 | **Monoplane** | Fast single-wing fighter (~2× top speed) |
 
-All craft use key-controlled throttle and rudder with mouse look for pitch/bank, plus a glassmorphic cockpit HUD (speed, altitude, V/S, throttle).
+All craft use key-controlled throttle and rudder with mouse look for pitch/bank, plus a glassmorphic cockpit HUD (speed, altitude, V/S, throttle). Press **H** in the cockpit to cycle full / mini / top-right HUD.
 
 ---
 
@@ -120,6 +120,7 @@ While piloting, press **V** to arm combat mode (HUD: **Combat: ARMED**).
 - Machine guns: dual tracers along the nose, free ammo.
 - Bombs inherit plane velocity; short fuse.
 - Occupied airframes take projectile/explosion damage (HUD airframe HP).
+- Hard landings damage the airframe from sink rate (flare gently; a smash can wreck the plane and hurt passengers).
 - Your own munitions do not damage your plane.
 - Keybinds: **Controls → Peter Wolf's Planes**.
 
@@ -131,7 +132,7 @@ While piloting, press **V** to arm combat mode (HUD: **Combat: ARMED**).
 - Deploys in free-fall (after enough fall distance).
 - **A/D** bank · **W** dive · **S** flare · **double-W** sprint dive · **double-A/D** spiral · **double-S** lock minimum sink.
 - **Ridge lift** on large slopes (≥10×10×10 height/length/width).
-- **H** — LIFT HUD (climb / sink + ridge strength).
+- **H** — LIFT HUD while flying the paraglider (climb / sink + ridge strength).
 - `/liftparticles` — optional rising-cloud visualization of updrafts.
 
 ---
@@ -148,9 +149,9 @@ While piloting, press **V** to arm combat mode (HUD: **Combat: ARMED**).
 
 ## 🛠️ Requirements
 
-- **Minecraft**: `26.2`
-- **Fabric Loader**: `>=0.19.3`
-- **Fabric API**: `>=0.153.0+26.2`
+- **Minecraft**: `26.3`
+- **Fabric Loader**: `>=0.19.5`
+- **Fabric API**: `>=0.160.7+26.3`
 - **Java**: `>=25`
 ```
 

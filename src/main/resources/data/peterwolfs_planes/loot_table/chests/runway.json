@@ -3,6 +3,7 @@
   "pools": [
     {
       "rolls": {
+        "type": "minecraft:uniform",
         "min": 2,
         "max": 4
       },
@@ -39,6 +40,11 @@
         },
         {
           "type": "minecraft:item",
+          "name": "peterwolfs_planes:helicopter",
+          "weight": 1
+        },
+        {
+          "type": "minecraft:item",
           "name": "peterwolfs_planes:paraglider_backpack",
           "weight": 2
         },
@@ -56,43 +62,40 @@
           "type": "minecraft:item",
           "name": "minecraft:tnt",
           "weight": 2,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "min": 4,
-                "max": 12
-              }
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 4,
+              "max": 12
             }
-          ]
+          }
         },
         {
           "type": "minecraft:item",
           "name": "minecraft:coal",
           "weight": 5,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "min": 4,
-                "max": 16
-              }
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 4,
+              "max": 16
             }
-          ]
+          }
         },
         {
           "type": "minecraft:item",
           "name": "minecraft:iron_ingot",
           "weight": 4,
-          "functions": [
-            {
-              "function": "minecraft:set_count",
-              "count": {
-                "min": 1,
-                "max": 6
-              }
+          "modifier": {
+            "type": "minecraft:set_count",
+            "count": {
+              "type": "minecraft:uniform",
+              "min": 1,
+              "max": 6
             }
-          ]
+          }
         }
       ]
     }
